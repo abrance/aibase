@@ -88,3 +88,29 @@ jobs:
         with:
           files: charts/aibase-*.tgz
           generate_release_notes: true
+
+  deploy:
+    needs: [image, chart]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to K3s
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.K3S_HOST }}
+          username: ${{ secrets.K3S_SSH_USER }}
+          key: ${{ secrets.K3S_SSH_KEY }}
+          script: |
+            set -e
+
+            IMAGE_TAG="${{ github.ref_name }}"
+
+            sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml helm upgrade --install aibase \
+              oci://ghcr.io/${{ github.repository_owner }}/charts/aibase \
+              --namespace aibase \
+              --reuse-values \
+              --set image.repository="ghcr.io/${{ github.repository_owner }}/aibase" \
+              --set image.tag="${IMAGE_TAG}" \
+              --set image.pullPolicy=IfNotPresent \
+              --atomic \
+              --wait
