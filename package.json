@@ -1,0 +1,20 @@
+{
+  "name": "aibase",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node src/server.mjs",
+    "start": "NODE_ENV=production node src/server.mjs",
+    "check": "node --check src/server.mjs && node --check src/mcp/openapi-docs.mjs",
+    "helm:up": "task helm-up",
+    "helm:down": "task helm-down"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@opencode-ai/sdk": "^1.17.3",
+    "better-sqlite3": "^11.7.0"
+  }
+}

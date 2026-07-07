@@ -1,0 +1,58 @@
+--- public/index.html
++++ public/index.html
+@@ -70,10 +70,18 @@
+       <aside class="panel">
+         <section>
++          <div class="panel-head">
++            <h2>市场</h2>
++          </div>
++          <div id="marketplace-list" class="skills"></div>
++        </section>
++
++        <section>
+           <div class="panel-head">
+             <h2>Skills</h2>
+-            <span id="skill-count">0</span>
++            <div style="display:flex; gap:8px; align-items:center;">
++              <button id="upload-skills" class="ghost" type="button" style="min-height:24px; padding:0 6px; font-size:11px;">上传到市场</button>
++              <span id="skill-count">0</span>
++            </div>
+           </div>
+           <div id="skill-dropzone" class="skill-dropzone" tabindex="0" role="button">
+             <strong>导入 ZIP</strong>
+@@ -85,7 +93,10 @@
+         <section>
+           <div class="panel-head">
+             <h2>MCP</h2>
+-            <span id="mcp-count">0</span>
++            <div style="display:flex; gap:8px; align-items:center;">
++              <button id="upload-mcp" class="ghost" type="button" style="min-height:24px; padding:0 6px; font-size:11px;">上传到市场</button>
++              <span id="mcp-count">0</span>
++            </div>
+           </div>
+           <div id="mcp-dropzone" class="skill-dropzone" tabindex="0" role="button">
+             <strong>导入文档</strong>
+@@ -97,7 +108,10 @@
+         <section>
+           <div class="panel-head">
+             <h2>Agents</h2>
+-            <span id="agent-count">0</span>
++            <div style="display:flex; gap:8px; align-items:center;">
++              <button id="upload-agents" class="ghost" type="button" style="min-height:24px; padding:0 6px; font-size:11px;">上传到市场</button>
++              <span id="agent-count">0</span>
++            </div>
+           </div>
+           <button id="new-agent" class="ghost panel-action" type="button">+ New Agent</button>
+           <div id="agents" class="skills"></div>
+@@ -106,7 +120,10 @@
+         <section>
+           <div class="panel-head">
+             <h2>知识库</h2>
+-            <span id="knowledge-count">0</span>
++            <div style="display:flex; gap:8px; align-items:center;">
++              <button id="upload-knowledge" class="ghost" type="button" style="min-height:24px; padding:0 6px; font-size:11px;">上传到市场</button>
++              <span id="knowledge-count">0</span>
++            </div>
+           </div>
+           <p id="knowledge-root" class="panel-meta">-</p>
+           <div class="knowledge-actions">

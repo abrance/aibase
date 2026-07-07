@@ -1,0 +1,16 @@
+image:
+  repository: aibase
+  pullPolicy: Never
+  tag: local
+
+service:
+  type: ClusterIP
+  port: 80
+
+persistence:
+  workspace:
+    enabled: false
+  opencodeData:
+    enabled: false
+  opencodeConfig:
+    enabled: false

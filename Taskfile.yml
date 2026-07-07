@@ -1,0 +1,49 @@
+version: "3"
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list
+
+  check:
+    desc: Run static checks
+    deps:
+      - npm-check
+      - helm-lint
+
+  npm-check:
+    desc: Check Node service syntax
+    cmds:
+      - npm run check
+
+  dev:
+    desc: Run Aibase locally with optional .env
+    cmds:
+      - |
+        set -e
+        if [ -f .env ]; then
+          set -a && source .env && set +a
+        fi
+        npm run dev
+    silent: false
+
+  helm-lint:
+    desc: Lint the Helm chart
+    cmds:
+      - helm lint charts/aibase
+
+  helm-template:
+    desc: Render the Helm chart
+    cmds:
+      - helm template aibase charts/aibase
+
+  helm-up:
+    desc: Build, install, wait, and port-forward Aibase through Helm
+    cmds:
+      - bash scripts/helm-up.sh
+
+  helm-down:
+    desc: Uninstall the local Aibase Helm release
+    cmds:
+      - bash scripts/helm-down.sh

@@ -1,0 +1,190 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "aibase.fullname" . }}
+  labels:
+    {{- include "aibase.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "aibase.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "aibase.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- $hasSkillsPersistence := or .Values.persistence.skills.enabled .Values.persistence.skills.existingClaim }}
+      {{- $hasMcpPersistence := or .Values.persistence.mcp.enabled .Values.persistence.mcp.existingClaim }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "aibase.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if or $hasSkillsPersistence $hasMcpPersistence }}
+      initContainers:
+        {{- if $hasSkillsPersistence }}
+        - name: seed-skills
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - |
+              if [ -z "$(find /skills-persistent -mindepth 1 -maxdepth 1 2>/dev/null)" ]; then
+                cp -a /app/skills/. /skills-persistent/
+              fi
+          volumeMounts:
+            - name: skills
+              mountPath: /skills-persistent
+        {{- end }}
+        {{- if $hasMcpPersistence }}
+        - name: seed-mcp
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - |
+              if [ -z "$(find /mcp-persistent -mindepth 1 -maxdepth 1 2>/dev/null)" ]; then
+                cp -a /app/mcp/. /mcp-persistent/
+              fi
+          volumeMounts:
+            - name: mcp
+              mountPath: /mcp-persistent
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: aibase
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.containerPort }}
+              protocol: TCP
+          env:
+            {{- range $name, $value := .Values.env }}
+            - name: {{ $name }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- if .Values.opencode.serverAuth.enabled }}
+            - name: OPENCODE_SERVER_USERNAME
+              value: {{ .Values.opencode.serverAuth.username | quote }}
+            {{- if .Values.opencode.serverAuth.existingSecret }}
+            - name: OPENCODE_SERVER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.opencode.serverAuth.existingSecret }}
+                  key: {{ .Values.opencode.serverAuth.passwordSecretKey }}
+            {{- end }}
+            {{- end }}
+            {{- if .Values.opencode.config.existingSecret }}
+            - name: OPENCODE_CONFIG_CONTENT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.opencode.config.existingSecret }}
+                  key: {{ .Values.opencode.config.secretKey }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- if or (include "aibase.hasManagedSecret" .) .Values.credentials.existingSecret .Values.extraEnvFrom }}
+          envFrom:
+            {{- if include "aibase.hasManagedSecret" . }}
+            - secretRef:
+                name: {{ include "aibase.fullname" . }}
+            {{- end }}
+            {{- if .Values.credentials.existingSecret }}
+            - secretRef:
+                name: {{ .Values.credentials.existingSecret }}
+            {{- end }}
+            {{- with .Values.extraEnvFrom }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- end }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- if or .Values.persistence.workspace.enabled .Values.persistence.workspace.existingClaim .Values.persistence.opencodeData.enabled .Values.persistence.opencodeData.existingClaim .Values.persistence.opencodeConfig.enabled .Values.persistence.opencodeConfig.existingClaim $hasSkillsPersistence $hasMcpPersistence .Values.extraVolumeMounts }}
+          volumeMounts:
+            {{- if or .Values.persistence.workspace.enabled .Values.persistence.workspace.existingClaim }}
+            - name: workspace
+              mountPath: {{ .Values.persistence.workspace.mountPath }}
+            {{- end }}
+            {{- if or .Values.persistence.opencodeData.enabled .Values.persistence.opencodeData.existingClaim }}
+            - name: opencode-data
+              mountPath: {{ .Values.persistence.opencodeData.mountPath }}
+            {{- end }}
+            {{- if or .Values.persistence.opencodeConfig.enabled .Values.persistence.opencodeConfig.existingClaim }}
+            - name: opencode-config
+              mountPath: {{ .Values.persistence.opencodeConfig.mountPath }}
+            {{- end }}
+            {{- if $hasSkillsPersistence }}
+            - name: skills
+              mountPath: {{ .Values.persistence.skills.mountPath }}
+            {{- end }}
+            {{- if $hasMcpPersistence }}
+            - name: mcp
+              mountPath: {{ .Values.persistence.mcp.mountPath }}
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- end }}
+      {{- if or .Values.persistence.workspace.enabled .Values.persistence.workspace.existingClaim .Values.persistence.opencodeData.enabled .Values.persistence.opencodeData.existingClaim .Values.persistence.opencodeConfig.enabled .Values.persistence.opencodeConfig.existingClaim $hasSkillsPersistence $hasMcpPersistence .Values.extraVolumes }}
+      volumes:
+        {{- if or .Values.persistence.workspace.enabled .Values.persistence.workspace.existingClaim }}
+        - name: workspace
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.workspace.existingClaim | default (printf "%s-workspace" (include "aibase.fullname" .)) }}
+        {{- end }}
+        {{- if or .Values.persistence.opencodeData.enabled .Values.persistence.opencodeData.existingClaim }}
+        - name: opencode-data
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.opencodeData.existingClaim | default (printf "%s-opencode-data" (include "aibase.fullname" .)) }}
+        {{- end }}
+        {{- if or .Values.persistence.opencodeConfig.enabled .Values.persistence.opencodeConfig.existingClaim }}
+        - name: opencode-config
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.opencodeConfig.existingClaim | default (printf "%s-opencode-config" (include "aibase.fullname" .)) }}
+        {{- end }}
+        {{- if $hasSkillsPersistence }}
+        - name: skills
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.skills.existingClaim | default (printf "%s-skills" (include "aibase.fullname" .)) }}
+        {{- end }}
+        {{- if $hasMcpPersistence }}
+        - name: mcp
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.mcp.existingClaim | default (printf "%s-mcp" (include "aibase.fullname" .)) }}
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

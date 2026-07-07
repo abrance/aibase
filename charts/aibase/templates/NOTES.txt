@@ -1,0 +1,15 @@
+Aibase has been deployed.
+
+Service:
+  {{ include "aibase.fullname" . }}:{{ .Values.service.port }}
+
+{{- if .Values.ingress.enabled }}
+Ingress:
+{{- range .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}{{ (index .paths 0).path }}
+{{- end }}
+{{- else }}
+Port-forward locally:
+  kubectl port-forward svc/{{ include "aibase.fullname" . }} 3001:{{ .Values.service.port }}
+  open http://127.0.0.1:3001
+{{- end }}

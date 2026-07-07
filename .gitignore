@@ -1,0 +1,7 @@
+node_modules/
+.env
+registry/bundles/
+*.log
+*.db
+*.db-shm
+*.db-wal

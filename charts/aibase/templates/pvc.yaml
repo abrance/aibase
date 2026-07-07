@@ -1,0 +1,109 @@
+{{- if and .Values.persistence.workspace.enabled (not .Values.persistence.workspace.existingClaim) -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "aibase.fullname" . }}-workspace
+  labels:
+    {{- include "aibase.labels" . | nindent 4 }}
+  {{- with .Values.persistence.workspace.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    {{- toYaml .Values.persistence.workspace.accessModes | nindent 4 }}
+  {{- with .Values.persistence.workspace.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.workspace.size | quote }}
+{{- end }}
+{{- if and .Values.persistence.opencodeData.enabled (not .Values.persistence.opencodeData.existingClaim) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "aibase.fullname" . }}-opencode-data
+  labels:
+    {{- include "aibase.labels" . | nindent 4 }}
+  {{- with .Values.persistence.opencodeData.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    {{- toYaml .Values.persistence.opencodeData.accessModes | nindent 4 }}
+  {{- with .Values.persistence.opencodeData.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.opencodeData.size | quote }}
+{{- end }}
+{{- if and .Values.persistence.opencodeConfig.enabled (not .Values.persistence.opencodeConfig.existingClaim) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "aibase.fullname" . }}-opencode-config
+  labels:
+    {{- include "aibase.labels" . | nindent 4 }}
+  {{- with .Values.persistence.opencodeConfig.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    {{- toYaml .Values.persistence.opencodeConfig.accessModes | nindent 4 }}
+  {{- with .Values.persistence.opencodeConfig.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.opencodeConfig.size | quote }}
+{{- end }}
+{{- if and .Values.persistence.skills.enabled (not .Values.persistence.skills.existingClaim) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "aibase.fullname" . }}-skills
+  labels:
+    {{- include "aibase.labels" . | nindent 4 }}
+  {{- with .Values.persistence.skills.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    {{- toYaml .Values.persistence.skills.accessModes | nindent 4 }}
+  {{- with .Values.persistence.skills.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.skills.size | quote }}
+{{- end }}
+{{- if and .Values.persistence.mcp.enabled (not .Values.persistence.mcp.existingClaim) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "aibase.fullname" . }}-mcp
+  labels:
+    {{- include "aibase.labels" . | nindent 4 }}
+  {{- with .Values.persistence.mcp.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    {{- toYaml .Values.persistence.mcp.accessModes | nindent 4 }}
+  {{- with .Values.persistence.mcp.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.mcp.size | quote }}
+{{- end }}
