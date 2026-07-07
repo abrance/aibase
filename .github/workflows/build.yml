@@ -105,6 +105,12 @@ jobs:
 
             IMAGE_TAG="${{ github.ref_name }}"
 
+            # K3s 主机上登录 GHCR，以便拉取 OCI chart
+            echo "${{ secrets.GITHUB_TOKEN }}" | \
+              sudo helm registry login ghcr.io \
+                --username "${{ github.actor }}" \
+                --password-stdin
+
             sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml helm upgrade --install aibase \
               oci://ghcr.io/${{ github.repository_owner }}/charts/aibase \
               --namespace aibase \
