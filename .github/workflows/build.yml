@@ -104,6 +104,8 @@ jobs:
             set -e
 
             IMAGE_TAG="${{ github.ref_name }}"
+            # docker/metadata-action 的 semver pattern 会去掉 v 前缀
+            IMAGE_TAG="${IMAGE_TAG#v}"
 
             # K3s 主机上登录 GHCR，以便拉取 OCI chart
             echo "${{ secrets.GITHUB_TOKEN }}" | \
