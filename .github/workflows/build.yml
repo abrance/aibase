@@ -91,7 +91,7 @@ jobs:
 
   deploy:
     needs: [image, chart]
-    if: github.event_name != 'pull_request'
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to K3s
