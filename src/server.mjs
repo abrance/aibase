@@ -1295,6 +1295,7 @@ async function streamPrompt(req, res, sessionID) {
 
   const finish = async () => {
     if (finished) return;
+    clearTimeout(safetyTimer);
     finished = true;
     clearTimeout(timeout);
     if (finishTimer) clearTimeout(finishTimer);
@@ -1320,7 +1321,7 @@ async function streamPrompt(req, res, sessionID) {
         }
         closeStream();
       });
-    }, 600);
+    }, 5000);
   };
 
   const cancelFinish = () => {
@@ -1333,6 +1334,16 @@ async function streamPrompt(req, res, sessionID) {
   let unsubEvent = null;
   let unsubState = null;
 
+  // Safety timeout — ensures the prompt always closes even if no events arrive.
+  // Reset by every event in the onEvent handler (proves the stream is alive).
+  // Must fire BEFORE the client disconnect timeout (120s) to write "done" gracefully.
+  let safetyTimer = setTimeout(() => {
+    if (!finished) {
+      console.warn(`[streamPrompt] safety timeout (90s) — forcing finish`);
+      finish().catch(() => {});
+    }
+  }, 90_000);
+
   try {
     writeEvent("phase", { label: "正在连接" });
     writeTrace({ label: "正在连接 opencode 事件流" }, "connect");
@@ -1343,6 +1354,15 @@ async function streamPrompt(req, res, sessionID) {
       if (finished) return;
       // Filter by directory — only process events for this workspace
       if (scopedEvent.workspaceKey.path !== opencodeDirectory) return;
+
+      // Any event proves the stream is alive — reset the safety timeout
+      clearTimeout(safetyTimer);
+      safetyTimer = setTimeout(() => {
+        if (!finished) {
+          console.warn(`[streamPrompt] safety timeout (90s) — forcing finish`);
+          finish().catch(() => {});
+        }
+      }, 90_000);
 
       try {
         handlePromptEvent({
@@ -1442,6 +1462,7 @@ async function streamPrompt(req, res, sessionID) {
     }
     closeStream();
   } finally {
+    clearTimeout(safetyTimer);
     unsubEvent?.();
     unsubState?.();
     clearTimeout(timeout);
@@ -1461,9 +1482,12 @@ async function handlePromptEvent(context) {
 
   switch (event.type) {
     case "message.updated": {
-      cancelFinish();
       const info = properties.info;
       if (!info?.id) return;
+
+      // New message — cancel any pending finish timer. The new processing
+      // cycle will restart it via message.part.updated or message.finish.
+      cancelFinish();
 
       if (info.role) messageRoles.set(info.id, info.role);
       if (info.role === "assistant") {
@@ -1478,12 +1502,14 @@ async function handlePromptEvent(context) {
           finishSoon();
         }
         if (info.error) {
+          const errMsg = formatOpencodeError(info.error);
+          console.error(`[handlePromptEvent] message.error: ${errMsg}`, info.error);
           writeTrace({
             kind: "error",
             label: "模型返回错误",
-            detail: formatOpencodeError(info.error),
+            detail: errMsg,
           }, `message-error:${info.id}`);
-          writeEvent("error", { message: formatOpencodeError(info.error) });
+          writeEvent("error", { message: errMsg });
         }
       }
       if (info.role === "user") {
@@ -1493,7 +1519,6 @@ async function handlePromptEvent(context) {
     }
 
     case "message.part.updated": {
-      cancelFinish();
       const part = properties.part;
       if (!part?.messageID) return;
 
@@ -1501,6 +1526,11 @@ async function handlePromptEvent(context) {
         || (part.messageID === context.activeAssistantMessageID ? "assistant" : "");
 
       if (role !== "assistant") return;
+
+      // Cancel any pending finish — new content means the stream isn't done.
+      // Restart the timer after processing so the prompt auto-finishes 600ms
+      // after the last event regardless of which part type it was.
+      cancelFinish();
       context.sawPromptActivity = true;
 
       if (part.type === "text") {
@@ -1532,6 +1562,10 @@ async function handlePromptEvent(context) {
       } else if (assistantParts.has(part.messageID)) {
         callPoll();
       }
+      // Restart the finish timer — auto-close 600ms after the last event.
+      // Prevents permanent hang when a second busy cycle starts but never
+      // sends session.idle (e.g., stuck tool call or auto-continuation).
+      finishSoon();
       break;
     }
 
@@ -1549,12 +1583,15 @@ async function handlePromptEvent(context) {
     case "session.error": {
       cancelFinish();
       context.sawPromptActivity = true;
+      const errDetail = formatOpencodeError(properties.error);
+      console.error(`[handlePromptEvent] session.error: ${errDetail}`, properties.error);
       writeTrace({
         kind: "error",
         label: "会话发生错误",
-        detail: formatOpencodeError(properties.error),
+        detail: errDetail,
       }, "session-error");
-      writeEvent("error", { message: formatOpencodeError(properties.error) });
+      writeEvent("error", { message: errDetail });
+      finishSoon();
       break;
     }
 

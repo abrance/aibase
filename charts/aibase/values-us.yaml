@@ -37,3 +37,29 @@ livenessProbe:
   initialDelaySeconds: 60
 readinessProbe:
   initialDelaySeconds: 30
+
+# opencode web UI — exposed at code.us.xiaoyxq.top
+opencodeWeb:
+  enabled: true
+
+  service:
+    type: ClusterIP
+    port: 4096
+
+  ingress:
+    enabled: true
+    className: traefik
+    hosts:
+      - host: code.us.xiaoyxq.top
+        paths:
+          - path: /
+            pathType: Prefix
+
+  env:
+    OMO_DEFAULT_ULTRA_MODEL: "customkimi/kimi-for-coding"
+    OMO_DEFAULT_LITE_MODEL: "opencode-zen/deepseek-v4-flash-free"
+
+  livenessProbe:
+    initialDelaySeconds: 60
+  readinessProbe:
+    initialDelaySeconds: 30

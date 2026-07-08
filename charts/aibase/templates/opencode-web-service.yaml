@@ -1,0 +1,23 @@
+{{- if .Values.opencodeWeb.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "aibase.fullname" . }}-web
+  labels:
+    {{- include "aibase.labels" . | nindent 4 }}
+    app.kubernetes.io/component: opencode-web
+  {{- with .Values.opencodeWeb.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.opencodeWeb.service.type }}
+  ports:
+    - port: {{ .Values.opencodeWeb.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "aibase.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: opencode-web
+{{- end }}

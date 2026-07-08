@@ -5,16 +5,20 @@
 # waits for tests to complete, then tears down.
 #
 # Usage:
-#   bash tests/integration/run.sh                    # skip LLM tests
-#   AIBASE_TEST_SKIP_LLM=0 bash tests/integration/run.sh  # full test
-#
-#   # With API keys:
-#   OPENAI_API_KEY=sk-xxx bash tests/integration/run.sh
-#   # Or via .env:
-#   cp .env.example .env && bash tests/integration/run.sh
+#   bash tests/integration/run.sh                      # full test with paid model
+#   AIBASE_TEST_SKIP_LLM=1 bash tests/integration/run.sh  # skip LLM tests
 #
 #   # Custom model:
 #   AIBASE_TEST_MODEL=anthropic/claude-haiku-4 bash tests/integration/run.sh
+#
+#   # Custom provider config (provider JSON):
+#   AIBASE_OPENCODE_PROVIDER_JSON='{"customkimi":{...}}' bash tests/integration/run.sh
+#
+#   # Full opencode config override:
+#   AIBASE_TEST_OPENCODE_CONFIG='{"model":"customkimi/kimi-for-coding","provider":{...}}' bash tests/integration/run.sh
+#
+#   # Provider API key (for custom provider):
+#   AIBASE_TEST_PROVIDER_API_KEY=sk-xxx bash tests/integration/run.sh
 
 set -euo pipefail
 
@@ -23,13 +27,22 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
 
 # ─── Defaults ──────────────────────────────────────────────
-export AIBASE_TEST_SKIP_LLM="${AIBASE_TEST_SKIP_LLM:-1}"
-export AIBASE_TEST_MODEL="${AIBASE_TEST_MODEL:-opencode/deepseek-v4-flash-free}"
+# Paid model as default — no more free-tier rate limits.
+export AIBASE_TEST_SKIP_LLM="${AIBASE_TEST_SKIP_LLM:-0}"
+export AIBASE_TEST_MODEL="${AIBASE_TEST_MODEL:-customkimi/kimi-for-coding}"
 export AIBASE_OPENCODE_MODEL="${AIBASE_OPENCODE_MODEL:-${AIBASE_TEST_MODEL}}"
+
+# Full opencode config override — takes precedence over individual vars.
+if [ -n "${AIBASE_TEST_OPENCODE_CONFIG:-}" ]; then
+  export OPENCODE_CONFIG_CONTENT="${AIBASE_TEST_OPENCODE_CONFIG}"
+fi
 
 echo "=== Aibase Integration Test Runner ==="
 echo "  model:       ${AIBASE_TEST_MODEL}"
 echo "  skip LLM:    ${AIBASE_TEST_SKIP_LLM}"
+if [ -n "${OPENCODE_CONFIG_CONTENT:-}" ]; then
+  echo "  config:      OPENCODE_CONFIG_CONTENT provided (${#OPENCODE_CONFIG_CONTENT} chars)"
+fi
 echo "  compose:     ${COMPOSE_FILE}"
 echo ""
 
