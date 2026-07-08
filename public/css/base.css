@@ -1,0 +1,150 @@
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --surface-muted: #edf0f4;
+  --surface-hover: #e8ecf1;
+  --line: #d4d8e0;
+  --line-subtle: #e2e5ea;
+  --ink: #1a1c23;
+  --ink-secondary: #3d4148;
+  --muted: #626879;
+  --primary: #5b7fd4;
+  --primary-muted: #dce6f9;
+  --primary-dark: #4668bc;
+  --accent: #d46a2e;
+  --accent-muted: #fbe9dc;
+  --ok: #3d9142;
+  --ok-muted: #dcf0dd;
+  --warn: #b08020;
+  --warn-muted: #faf0d6;
+  --danger: #d1242f;
+  --danger-muted: #fde2e4;
+  --code-bg: #f0f1f3;
+  --code-block-bg: #1a1c23;
+  --code-block-ink: #e3e6ed;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.10);
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --transition: 150ms ease;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+[data-theme="dark"] {
+  --bg: #0c0e11;
+  --surface: #14161a;
+  --surface-muted: #1b1e23;
+  --surface-hover: #1f2229;
+  --line: #282d33;
+  --line-subtle: #22262d;
+  --ink: #c9cdd4;
+  --ink-secondary: #9da3ad;
+  --muted: #6b7280;
+  --primary: #7c9ff5;
+  --primary-muted: #1b2540;
+  --primary-dark: #6282d4;
+  --accent: #f0883e;
+  --accent-muted: #2c1f14;
+  --ok: #57ab5a;
+  --ok-muted: #162818;
+  --warn: #d69e2e;
+  --warn-muted: #2c2414;
+  --danger: #e5534b;
+  --danger-muted: #2c1618;
+  --code-bg: #1b1e23;
+  --code-block-bg: #0d1016;
+  --code-block-ink: #c9cdd4;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.20);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.28);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.40);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  height: 100vh;
+  margin: 0;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--ink);
+  transition: background var(--transition), color var(--transition);
+}
+
+button,
+textarea,
+input,
+select {
+  font: inherit;
+  transition: background var(--transition), border-color var(--transition), box-shadow var(--transition), color var(--transition);
+}
+
+button {
+  min-height: 36px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 0 14px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--ink);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.primary {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+
+.ghost {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+.ghost:hover:not(:disabled) {
+  background: var(--surface-muted);
+  border-color: var(--ink-secondary);
+}
+
+.panel-upload-btn {
+  min-height: 24px;
+  padding: 0 6px;
+  font-size: 11px;
+}
+
+.theme-toggle {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  padding: 0;
+  font-size: 16px;
+  cursor: pointer;
+}
+.theme-toggle:hover {
+  background: var(--surface-muted);
+  color: var(--ink);
+}

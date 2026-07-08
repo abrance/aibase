@@ -4,7 +4,14 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Aibase</title>
-    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="stylesheet" href="/css/sessions.css">
+    <link rel="stylesheet" href="/css/chat.css">
+    <link rel="stylesheet" href="/css/composer.css">
+    <link rel="stylesheet" href="/css/panels.css">
+    <link rel="stylesheet" href="/css/modals.css">
+    <link rel="stylesheet" href="/css/responsive.css">
   </head>
   <body>
     <div id="app" class="shell">
@@ -33,6 +40,7 @@
             <h2 id="session-title">Aibase Console</h2>
           </div>
           <div class="status">
+            <button id="theme-toggle" class="theme-toggle" type="button" title="切换主题">☀</button>
             <span id="kernel-dot" class="dot"></span>
             <span id="kernel-status">Starting</span>
           </div>
@@ -71,7 +79,7 @@
         <section>
           <div class="panel-head">
             <h2>Marketplace</h2>
-            <button id="marketplace-archive" class="ghost" type="button" style="min-height:24px; padding:0 6px; font-size:11px;">归档</button>
+            <button id="marketplace-archive" class="ghost panel-upload-btn" type="button">归档</button>
           </div>
           <div id="marketplace-list" class="skills"></div>
         </section>
@@ -79,8 +87,8 @@
         <section>
           <div class="panel-head">
             <h2>Skills</h2>
-            <div style="display:flex; gap:8px; align-items:center;">
-              <button id="upload-skills" class="ghost" type="button" style="min-height:24px; padding:0 6px; font-size:11px;">上传到市场</button>
+            <div class="panel-head-actions">
+              <button id="upload-skills" class="ghost panel-upload-btn" type="button">上传到市场</button>
               <span id="skill-count">0</span>
             </div>
           </div>
@@ -95,8 +103,8 @@
         <section>
           <div class="panel-head">
             <h2>MCP</h2>
-            <div style="display:flex; gap:8px; align-items:center;">
-              <button id="upload-mcp" class="ghost" type="button" style="min-height:24px; padding:0 6px; font-size:11px;">上传到市场</button>
+            <div class="panel-head-actions">
+              <button id="upload-mcp" class="ghost panel-upload-btn" type="button">上传到市场</button>
               <span id="mcp-count">0</span>
             </div>
           </div>
@@ -111,8 +119,8 @@
         <section>
           <div class="panel-head">
             <h2>Agents</h2>
-            <div style="display:flex; gap:8px; align-items:center;">
-              <button id="upload-agents" class="ghost" type="button" style="min-height:24px; padding:0 6px; font-size:11px;">上传到市场</button>
+            <div class="panel-head-actions">
+              <button id="upload-agents" class="ghost panel-upload-btn" type="button">上传到市场</button>
               <span id="agent-count">0</span>
             </div>
           </div>
@@ -123,8 +131,8 @@
         <section>
           <div class="panel-head">
             <h2>知识库</h2>
-            <div style="display:flex; gap:8px; align-items:center;">
-              <button id="upload-knowledge" class="ghost" type="button" style="min-height:24px; padding:0 6px; font-size:11px;">上传到市场</button>
+            <div class="panel-head-actions">
+              <button id="upload-knowledge" class="ghost panel-upload-btn" type="button">上传到市场</button>
               <span id="knowledge-count">0</span>
             </div>
           </div>
@@ -323,6 +331,6 @@
 
     
     <input id="marketplace-upload-file" type="file" accept=".zip,application/zip" hidden>
-    <script type="module" src="/app.js"></script>
+    <script type="module" src="/js/main.js"></script>
   </body>
 </html>

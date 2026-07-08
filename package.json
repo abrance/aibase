@@ -7,6 +7,10 @@
     "dev": "node src/server.mjs",
     "start": "NODE_ENV=production node src/server.mjs",
     "check": "node --check src/server.mjs && node --check src/mcp/openapi-docs.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:integration": "node --test tests/integration/*.test.mjs",
+    "test:integration:no-llm": "AIBASE_TEST_SKIP_LLM=1 node --test tests/integration/*.test.mjs",
+    "test:docker": "bash tests/integration/run.sh",
     "helm:up": "task helm-up",
     "helm:down": "task helm-down"
   },

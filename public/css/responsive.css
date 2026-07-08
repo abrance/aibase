@@ -1,0 +1,19 @@
+@media (max-width: 860px) {
+  body { overflow: auto; }
+  .shell {
+    grid-template-columns: 230px minmax(0, 1fr);
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+  .panel { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--line); }
+}
+
+@media (max-width: 720px) {
+  .shell { display: block; }
+  .rail, .panel { border: 0; border-bottom: 1px solid var(--line); max-height: none; }
+  .conversation { height: 74vh; min-height: 520px; }
+  .topbar { align-items: flex-start; flex-direction: column; }
+  .message { max-width: 100%; }
+  .jump-latest { right: 18px; bottom: 132px; }
+}

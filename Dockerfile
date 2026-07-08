@@ -30,6 +30,7 @@ RUN apt-get update \
       ripgrep \
       sudo \
       unzip \
+      jq \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install --break-system-packages cryptography -i https://pypi.mirrors.ustc.edu.cn/simple/ 
