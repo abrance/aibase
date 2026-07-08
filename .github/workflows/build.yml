@@ -113,10 +113,35 @@ jobs:
                 --username "${{ github.actor }}" \
                 --password-stdin
 
+            # opencode-web 配置（values-us.yaml 不在远程主机上，用 heredoc 写入）
+            cat > /tmp/opencode-web-values.yaml << 'EOF'
+            opencodeWeb:
+              enabled: true
+              service:
+                type: ClusterIP
+                port: 4096
+              ingress:
+                enabled: true
+                className: traefik
+                hosts:
+                  - host: code.us.xiaoyxq.top
+                    paths:
+                      - path: /
+                        pathType: Prefix
+              env:
+                OMO_DEFAULT_ULTRA_MODEL: "customkimi/kimi-for-coding"
+                OMO_DEFAULT_LITE_MODEL: "opencode-zen/deepseek-v4-flash-free"
+              livenessProbe:
+                initialDelaySeconds: 60
+              readinessProbe:
+                initialDelaySeconds: 30
+            EOF
+
             sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml helm upgrade --install aibase \
               oci://ghcr.io/${{ github.repository_owner }}/charts/aibase \
               --namespace aibase \
               --reuse-values \
+              -f /tmp/opencode-web-values.yaml \
               --set image.repository="ghcr.io/${{ github.repository_owner }}/aibase" \
               --set image.tag="${IMAGE_TAG}" \
               --set image.pullPolicy=IfNotPresent \
