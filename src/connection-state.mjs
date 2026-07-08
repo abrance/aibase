@@ -51,6 +51,7 @@ export function directoryKey(path) {
  *   maxConsecutiveErrors?: number,
  *   retryDelayMs?: number,
  *   maxRetryDelayMs?: number,
+ *   healthProbeTimeoutMs?: number,
  * }} EventSourceConfig
  */
 
@@ -62,3 +63,6 @@ export const DEFAULT_RETRY_DELAY_MS = 3000;
 
 /** Maximum retry delay in ms (exponential backoff cap). */
 export const DEFAULT_MAX_RETRY_DELAY_MS = 30_000;
+
+/** Default health probe timeout in ms before degrading to direct SSE connection. */
+export const DEFAULT_HEALTH_PROBE_TIMEOUT_MS = 5_000;

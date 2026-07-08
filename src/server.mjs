@@ -219,6 +219,15 @@ async function main() {
     password: opencodePassword,
   });
 
+  // Start the global SSE connection and wait for it to establish.
+  // Non-fatal on failure — REST endpoints still work without SSE.
+  try {
+    await connectionManager.ensureConnected(30_000);
+    console.log("[main] EventSourceManager connected");
+  } catch (err) {
+    console.warn(`[main] EventSourceManager connection failed (non-fatal): ${err.message}`);
+  }
+
   const server = createServer(async (req, res) => {
     try {
       await route(req, res);
@@ -350,6 +359,12 @@ async function restartOpencode() {
     directory: opencodeDirectory,
     password: opencodePassword,
   });
+  try {
+    await connectionManager.ensureConnected(30_000);
+    console.log("[restartOpencode] EventSourceManager connected");
+  } catch (err) {
+    console.warn(`[restartOpencode] EventSourceManager connection failed (non-fatal): ${err.message}`);
+  }
 }
 
 async function discoverSkillPaths() {
@@ -1263,13 +1278,6 @@ async function streamPrompt(req, res, sessionID) {
   let finished = false;
   let finishTimer = null;
 
-  // ─── Generation tracking for stale event protection ──────
-  let generation = 0;
-  let consecutiveErrors = 0;
-  const MAX_CONSECUTIVE_ERRORS = 15;
-  const RETRY_DELAY_MS = 3000;
-  const MAX_RETRY_DELAY_MS = 30000;
-
   const emitFinalMessages = async () => {
     try {
       const messages = await connectionManager.client.session.messages({
@@ -1291,8 +1299,12 @@ async function streamPrompt(req, res, sessionID) {
     clearTimeout(timeout);
     if (finishTimer) clearTimeout(finishTimer);
     await emitFinalMessages();
-    writeTrace({ kind: "done", label: "响应已完成" }, "finish");
-    writeEvent("done", {});
+    // Write terminal events directly — bypass writeEvent's responseOpen guard
+    // because res.on("close") may have already set responseOpen=false.
+    if (!res.destroyed) {
+      writeSse(res, "trace", { kind: "done", label: "响应已完成", time: Date.now() });
+      writeSse(res, "done", {});
+    }
     abortController.abort();
     closeStream();
   };
@@ -1302,9 +1314,10 @@ async function streamPrompt(req, res, sessionID) {
     finishTimer = setTimeout(() => {
       finishTimer = null;
       finish().catch((error) => {
-        writeEvent("error", {
-          message: error instanceof Error ? error.message : String(error),
-        });
+        if (!res.destroyed) {
+          writeSse(res, "error", { message: error instanceof Error ? error.message : String(error) });
+          writeSse(res, "done", {});
+        }
         closeStream();
       });
     }, 600);
@@ -1317,111 +1330,76 @@ async function streamPrompt(req, res, sessionID) {
     }
   };
 
-  /**
-   * Backoff delay: initial * 2^(attempt-1), capped at max, 25% jitter.
-   */
-  const backoffDelay = (attempt) => {
-    const raw = Math.min(RETRY_DELAY_MS * Math.pow(2, attempt - 1), MAX_RETRY_DELAY_MS);
-    const jitter = 1 - Math.random() * 0.25;
-    return Math.floor(raw * jitter);
-  };
-
-  /**
-   * Run the SSE event loop for a given generation.
-   * On stream end/error, auto-reconnects with backoff unless max errors reached.
-   */
-  const runEventLoop = async (gen) => {
-    if (finished || abortController.signal.aborted) return;
-
-    try {
-      const eventStream = await connectionManager.client.event.subscribe({
-        query: { directory: opencodeDirectory },
-        signal: abortController.signal,
-      });
-
-      // Stale check — if generation changed during subscribe, abort
-      if (gen !== generation || finished) return;
-
-      // Reset error counter on successful connection
-      consecutiveErrors = 0;
-
-      for await (const event of eventStream.stream) {
-        if (gen !== generation || finished) break; // stale generation
-
-        await handlePromptEvent({
-          event,
-          sessionID,
-          messageRoles,
-          assistantParts,
-          get activeAssistantMessageID() {
-            return activeAssistantMessageID;
-          },
-          set activeAssistantMessageID(value) {
-            activeAssistantMessageID = value;
-          },
-          get sawPromptActivity() {
-            return sawPromptActivity;
-          },
-          set sawPromptActivity(value) {
-            sawPromptActivity = value;
-          },
-          writeEvent,
-          writeTrace,
-          finish,
-          finishSoon,
-          cancelFinish,
-          startCompletionPoll: null,  // removed — no polling needed
-        });
-      }
-
-      // Stream ended cleanly — reconnect with backoff if not finished
-      if (!finished && gen === generation) {
-        consecutiveErrors++;
-        if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-          console.warn(`[streamPrompt] ${consecutiveErrors} consecutive errors — disconnecting`);
-          writeTrace({ kind: "error", label: "流式连接失败过多，已断开" }, "sse-escalated");
-          writeEvent("error", { message: "Stream connection lost after too many retries." });
-          await finish();
-        } else {
-          const delay = backoffDelay(consecutiveErrors);
-          console.debug(`[streamPrompt] stream ended cleanly, reconnecting in ${delay}ms (attempt ${consecutiveErrors})`);
-          await new Promise(r => setTimeout(r, delay));
-          if (!finished && gen === generation) await runEventLoop(gen);
-        }
-      }
-    } catch (error) {
-      if (error?.name === "AbortError" || abortController.signal.aborted) return;
-      if (gen !== generation || finished) return;
-
-      consecutiveErrors++;
-      if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-        console.warn(`[streamPrompt] ${consecutiveErrors} consecutive errors (last: ${error.message}) — disconnecting`);
-        writeTrace({ kind: "error", label: "流式连接失败过多，已断开", detail: error.message }, "sse-escalated");
-        writeEvent("error", { message: "Stream connection failed after too many retries." });
-        await finish();
-      } else {
-        const delay = backoffDelay(consecutiveErrors);
-        console.debug(`[streamPrompt] SSE error (${consecutiveErrors}): ${error.message}, reconnecting in ${delay}ms`);
-        await new Promise(r => setTimeout(r, delay));
-        if (!finished && gen === generation) await runEventLoop(gen);
-      }
-    }
-  };
+  let unsubEvent = null;
+  let unsubState = null;
 
   try {
     writeEvent("phase", { label: "正在连接" });
     writeTrace({ label: "正在连接 opencode 事件流" }, "connect");
 
-    // Subscribe SSE first (before sending prompt) — no events lost
-    generation++;
-    const currentGen = generation;
-    const eventLoopDone = runEventLoop(currentGen);
+    // Register on the global SSE event stream — no separate subscription per prompt.
+    // Events arrive through EventSourceManager → ConnectionManager → this handler.
+    unsubEvent = connectionManager.onEvent((scopedEvent) => {
+      if (finished) return;
+      // Filter by directory — only process events for this workspace
+      if (scopedEvent.workspaceKey.path !== opencodeDirectory) return;
+
+      try {
+        handlePromptEvent({
+          event: scopedEvent.event,
+          sessionID,
+          messageRoles,
+          assistantParts,
+          get activeAssistantMessageID() { return activeAssistantMessageID; },
+          set activeAssistantMessageID(value) { activeAssistantMessageID = value; },
+          get sawPromptActivity() { return sawPromptActivity; },
+          set sawPromptActivity(value) { sawPromptActivity = value; },
+          writeEvent,
+          writeTrace,
+          finish,
+          finishSoon,
+          cancelFinish,
+          startCompletionPoll: null,
+        });
+      } catch (err) {
+        console.error("[streamPrompt] error handling SSE event:", err?.message || err);
+        writeEvent("error", { message: `Event processing error: ${err?.message || err}` });
+      }
+    });
+
+    // Listen for global connection state changes — finish prompt if connection is lost
+    unsubState = connectionManager.onStateChange((state) => {
+      if (finished) return;
+      if (state === ConnectionState.Disconnected || state === ConnectionState.Error) {
+        console.warn(`[streamPrompt] connection state → ${state}, finishing prompt`);
+        writeEvent("error", { message: `Server connection lost (${state}).` });
+        finish().catch((err) => {
+          console.error("[streamPrompt] error during forced finish:", err?.message || err);
+        });
+      }
+    });
+
+    // Ensure the EventSourceManager is connected before sending prompt
+    if (!connectionManager.isConnected) {
+      writeTrace({ label: "等待 opencode 连接就绪" }, "wait-connect");
+      await new Promise((resolve, reject) => {
+        const t = setTimeout(() => reject(new Error("opencode connection timeout")), 10_000);
+        const unsub = connectionManager.onStateChange((s) => {
+          if (s === ConnectionState.Connected) {
+            clearTimeout(t);
+            unsub();
+            resolve();
+          }
+        });
+        if (connectionManager.isConnected) { clearTimeout(t); unsub(); resolve(); }
+      });
+    }
 
     writeTrace({ label: "事件流已连接，等待模型响应" }, "connected");
     writeEvent("phase", { label: "正在分析" });
     writeTrace({ label: "请求已发送给 opencode" }, "prompt-send");
 
-    const promptPromise = connectionManager.client.session.promptAsync({
+    await connectionManager.client.session.promptAsync({
       path: { id: sessionID },
       query: { directory: opencodeDirectory },
       body: {
@@ -1436,26 +1414,36 @@ async function streamPrompt(req, res, sessionID) {
       writeEvent("accepted", {});
     });
 
-    await promptPromise;
-    await eventLoopDone;
+    // Wait for prompt to finish — events arrive via onEvent handler above,
+    // and handlePromptEvent calls finishSoon → finish when the session goes idle.
+    while (!finished && !abortController.signal.aborted) {
+      await new Promise(r => setTimeout(r, 200));
+    }
+
+    // Ensure stream is always properly finalized — whether finish() was called
+    // normally or the while loop exited because the client disconnected.
+    if (!finished) {
+      await finish();
+    }
+
   } catch (error) {
-    if (!finished && (!abortController.signal.aborted || timedOut)) {
-      writeEvent("error", {
-        message: timedOut
-          ? `Prompt stream timed out after ${promptStreamTimeoutMs}ms.`
-          : error instanceof Error ? error.message : String(error),
-      });
-      writeTrace({
-        kind: "error",
-        label: "流式请求失败",
-        detail: timedOut
-          ? `Prompt stream timed out after ${promptStreamTimeoutMs}ms.`
-          : error instanceof Error ? error.message : String(error),
-      }, "stream-error");
+    // Always write a terminal event before closing, regardless of abort state.
+    // The old guard (!abortController.signal.aborted || timedOut) could skip
+    // "done" when the client disconnected mid-stream.
+    if (!finished) {
+      const msg = timedOut
+        ? `Prompt stream timed out after ${promptStreamTimeoutMs}ms.`
+        : error instanceof Error ? error.message : String(error);
+      writeEvent("error", { message: msg });
+      writeTrace({ kind: "error", label: "流式请求失败", detail: msg }, "stream-error");
+    }
+    if (!finished && !timedOut) {
       writeEvent("done", {});
     }
     closeStream();
   } finally {
+    unsubEvent?.();
+    unsubState?.();
     clearTimeout(timeout);
     if (finishTimer) clearTimeout(finishTimer);
   }

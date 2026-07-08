@@ -26,12 +26,9 @@ import {
   MODEL,
   waitForReady,
   createSession,
-  sendPrompt,
   sendStreamPrompt,
-  waitForAssistantMessage,
   getMessages,
   get,
-  post,
 } from "./helpers.mjs";
 
 // ─── Setup ──────────────────────────────────────────────────
@@ -87,30 +84,27 @@ test("PATCH /api/sessions/:id/title updates session title", async () => {
   assert.ok(updated.title?.includes("renamed"), `title should contain "renamed", got: ${updated.title}`);
 });
 
-// ─── Non-streaming Prompt (requires LLM) ─────────────────────
+// ─── Prompt + response verification (requires LLM) ───────────
 
-test("POST /api/sessions/:id/prompt + poll messages gets assistant response", { skip: SKIP_LLM }, async () => {
+test("stream prompt → wait for done → poll messages gets assistant response", { skip: SKIP_LLM }, async () => {
   requireReady();
   const session = await createSession({ title: "integration-test-prompt" });
 
-  // Send a prompt that asks for a deterministic short reply
-  const promptResult = await sendPrompt(session.id, "Reply with exactly this word: PONG");
-  assert.ok(promptResult, "prompt should return a result");
+  // Use streaming to send prompt
+  const result = await sendStreamPrompt(session.id, "Reply with exactly this word: PONG");
+  assert.equal(result.status, "done", `stream should finish with done, got: ${result.status}`);
 
-  // Poll for assistant response
-  const assistantMsgs = await waitForAssistantMessage(session.id);
-  assert.ok(assistantMsgs.length > 0, "should receive at least one assistant message");
+  // After stream completes, the messages endpoint should have the full conversation
+  const messages = await getMessages(session.id);
+  const assistantMsgs = messages.filter(
+    m => (m.info?.role || m.role) === "assistant" && m.parts?.some(p => p.type === "text" && p.text?.trim())
+  );
+  assert.ok(assistantMsgs.length > 0, "should have at least one assistant message after stream completes");
 
-  const firstMsg = assistantMsgs[0];
-  const textParts = firstMsg.parts?.filter(p => p.type === "text") || [];
-  assert.ok(textParts.length > 0, "assistant message should have text parts");
-
+  const textParts = assistantMsgs[0].parts?.filter(p => p.type === "text") || [];
   const combined = textParts.map(p => p.text).join(" ");
   console.log(`  assistant response: ${combined.substring(0, 200)}`);
-  assert.ok(
-    combined.length > 0,
-    "assistant response should not be empty"
-  );
+  assert.ok(combined.length > 0, "assistant response should not be empty");
 });
 
 // ─── Streaming Prompt (requires LLM) ─────────────────────────

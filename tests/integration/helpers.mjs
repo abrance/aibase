@@ -221,7 +221,7 @@ export async function waitForAssistantMessage(sessionId, opts = {}) {
   while (Date.now() - start < timeout) {
     const messages = await getMessages(sessionId);
     const assistantMsgs = messages.filter(
-      m => m.role === "assistant" && m.parts?.some(p => p.type === "text" && p.text?.trim())
+      m => (m.info?.role || m.role) === "assistant" && m.parts?.some(p => p.type === "text" && p.text?.trim())
     );
     if (assistantMsgs.length > 0) return assistantMsgs;
     await sleep(interval);

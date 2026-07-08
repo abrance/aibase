@@ -17,9 +17,52 @@ import { ConnectionState } from "./connection-state.mjs";
 import { EventSourceManager } from "./event-source.mjs";
 import { HydrationEventBuffer } from "./event-buffer.mjs";
 
+/**
+ * Default opencode serve port. When the user provides a URL with this port,
+ * we also try the standard HTTP/HTTPS port as a fallback (the server may be
+ * proxied through nginx/traefik on 80/443).
+ */
+const OPENCODE_DEFAULT_PORT = 4096;
+
+/**
+ * Generate connection URL candidates from a base URL.
+ * Mirrors P4OC's ConnectionManager.connectionCandidates().
+ *
+ * When the base URL uses the standard opencode port (4096), a fallback URL
+ * with the standard scheme port (80/443) is appended. This handles the common
+ * case where a server is exposed behind a reverse proxy.
+ *
+ * @param {string} baseUrl
+ * @returns {string[]}
+ */
+function connectionCandidates(baseUrl) {
+  const trimmed = baseUrl.trimEnd("/");
+  const candidates = [trimmed];
+
+  try {
+    const parsed = new URL(trimmed);
+
+    // Only generate fallback when using the default opencode port
+    if (parsed.port === String(OPENCODE_DEFAULT_PORT)) {
+      const fallbackPort = parsed.protocol === "https:" ? "443" : "80";
+      // Don't add fallback if it would be identical (unlikely but defensive)
+      if (fallbackPort !== parsed.port) {
+        const fallback = `${parsed.protocol}//${parsed.hostname}:${fallbackPort}${parsed.pathname}`.replace(/\/$/, "");
+        if (fallback !== trimmed) {
+          candidates.push(fallback);
+        }
+      }
+    }
+  } catch {
+    // URL parsing failed — just return the raw string
+  }
+
+  return candidates;
+}
+
 export class ConnectionManager {
-  /** @type {string} */
-  #baseUrl;
+  /** @type {string[]} */
+  #candidateUrls;
 
   /** @type {string} */
   #directory;
@@ -49,16 +92,18 @@ export class ConnectionManager {
    * @param {{ baseUrl: string, directory: string, password?: string }} params
    */
   constructor({ baseUrl, directory, password }) {
-    this.#baseUrl = baseUrl;
+    this.#candidateUrls = connectionCandidates(baseUrl);
     this.#directory = directory;
     this.#password = password;
+
+    console.debug(`[ConnectionManager] candidates: ${this.#candidateUrls.join(", ")}`);
 
     // Create the SDK client (replaces the old global singleton)
     this.#client = this.#buildClient();
 
-    // Create the EventSource manager
+    // Create the EventSource manager — uses the primary (first) candidate
     this.#eventSource = new EventSourceManager(
-      { baseUrl, directory },
+      { baseUrl: this.#candidateUrls[0], directory },
       this.#client,
     );
 
@@ -89,6 +134,9 @@ export class ConnectionManager {
 
   // ─── Public read-only ────────────────────────────────────
 
+  /** @returns {string} The resolved (primary) base URL used for connections. */
+  get baseUrl() { return this.#candidateUrls[0]; }
+
   /** @returns {import("@opencode-ai/sdk").Opencode} */
   get client() { return this.#client; }
 
@@ -101,10 +149,23 @@ export class ConnectionManager {
   /** @returns {number} */
   get generation() { return this.#eventSource.generation; }
 
+  /** @returns {number} Current consecutive error count from the EventSource. */
+  get consecutiveErrors() { return this.#eventSource.consecutiveErrors; }
+
   // ─── Event listeners ─────────────────────────────────────
 
-  /** @param {(state: string) => void} fn */
-  onStateChange(fn) { this.#stateListeners.push(fn); }
+  /**
+   * Register a connection state listener.
+   * @param {(state: string) => void} fn
+   * @returns {() => void} unsubscribe function
+   */
+  onStateChange(fn) {
+    this.#stateListeners.push(fn);
+    return () => {
+      const idx = this.#stateListeners.indexOf(fn);
+      if (idx >= 0) this.#stateListeners.splice(idx, 1);
+    };
+  }
 
   /**
    * Register a downstream event listener.
@@ -112,14 +173,56 @@ export class ConnectionManager {
    * After hydration ends, events flow directly.
    *
    * @param {(event: import("./connection-state.mjs").ScopedEvent<any>) => void} fn
+   * @returns {() => void} unsubscribe function
    */
-  onEvent(fn) { this.#eventListeners.push(fn); }
+  onEvent(fn) {
+    this.#eventListeners.push(fn);
+    return () => {
+      const idx = this.#eventListeners.indexOf(fn);
+      if (idx >= 0) this.#eventListeners.splice(idx, 1);
+    };
+  }
 
   // ─── Lifecycle ───────────────────────────────────────────
 
-  /** Start SSE connection. */
+  /** Start SSE connection (fire-and-forget — does not wait for establishment). */
   connect() {
     this.#eventSource.connect();
+  }
+
+  /**
+   * Start SSE connection and wait for it to reach Connected state.
+   * Useful at startup to ensure the connection is ready before accepting requests.
+   *
+   * @param {number} [timeoutMs=30_000] — max wait time in ms
+   * @returns {Promise<void>}
+   */
+  async ensureConnected(timeoutMs = 30_000) {
+    if (this.isConnected) return;
+
+    this.connect();
+
+    if (this.isConnected) return;
+
+    return new Promise((resolve, reject) => {
+      const t = setTimeout(
+        () => reject(new Error(`EventSourceManager did not connect within ${timeoutMs}ms`)),
+        timeoutMs,
+      );
+      const unsub = this.onStateChange((state) => {
+        if (state === ConnectionState.Connected) {
+          clearTimeout(t);
+          unsub();
+          resolve();
+        }
+      });
+      // Check once more in case it connected between the check and now
+      if (this.isConnected) {
+        clearTimeout(t);
+        unsub();
+        resolve();
+      }
+    });
   }
 
   /** Clean disconnect with SSE shutdown. */
@@ -199,7 +302,7 @@ export class ConnectionManager {
     }
 
     return createOpencodeClient({
-      baseUrl: this.#baseUrl,
+      baseUrl: this.#candidateUrls[0],
       headers,
       responseStyle: "data",
       throwOnError: true,

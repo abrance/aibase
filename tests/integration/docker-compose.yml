@@ -1,0 +1,62 @@
+services:
+  aibase:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: aibase-test
+    environment:
+      - AIBASE_HOST=0.0.0.0
+      - AIBASE_PORT=3001
+      - AIBASE_WORKSPACE=/workspace
+      - AIBASE_SKILLS_DIR=/app/skills
+      - AIBASE_MCP_DIR=/app/mcp
+      - AIBASE_OPENCODE_MODEL
+      - AIBASE_OPENCODE_SMALL_MODEL
+      - AIBASE_OPENCODE_DEFAULT_AGENT
+      - AIBASE_OPENCODE_PROVIDER_JSON
+      - AIBASE_OPENCODE_DISABLED_PROVIDERS
+      - AIBASE_PROMPT_STREAM_TIMEOUT_MS=600000
+      - OPENAI_API_KEY
+      - AIBASE_OPENAI_API_KEY
+      - OPENAI_BASE_URL
+      - AIBASE_OPENAI_BASE_URL
+      - ANTHROPIC_API_KEY
+      - AIBASE_ANTHROPIC_API_KEY
+      - GOOGLE_GENERATIVE_AI_API_KEY
+      - GEMINI_API_KEY
+      - AIBASE_GOOGLE_GENERATIVE_AI_API_KEY
+      - AIBASE_GEMINI_API_KEY
+      - OPENROUTER_API_KEY
+      - AIBASE_OPENROUTER_API_KEY
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3001/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      start_period: 30s
+      retries: 20
+
+  test:
+    image: node:22-bookworm-slim
+    container_name: aibase-test-runner
+    depends_on:
+      aibase:
+        condition: service_healthy
+    environment:
+      - AIBASE_TEST_URL=http://aibase:3001
+      - AIBASE_TEST_MODEL
+      - AIBASE_TEST_TIMEOUT_MS=120000
+      - AIBASE_TEST_SKIP_LLM
+    volumes:
+      - ../..:/app:ro
+    working_dir: /app
+    command:
+      - node
+      - --test
+      - tests/integration/health.test.mjs
+      - tests/integration/session-prompt.test.mjs

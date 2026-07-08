@@ -23,7 +23,7 @@
  *   - "escalated" ()             — max consecutive errors reached → Disconnected
  */
 
-import { ConnectionState, directoryKey, DEFAULT_MAX_CONSECUTIVE_ERRORS, DEFAULT_RETRY_DELAY_MS, DEFAULT_MAX_RETRY_DELAY_MS } from "./connection-state.mjs";
+import { ConnectionState, directoryKey, DEFAULT_MAX_CONSECUTIVE_ERRORS, DEFAULT_RETRY_DELAY_MS, DEFAULT_MAX_RETRY_DELAY_MS, DEFAULT_HEALTH_PROBE_TIMEOUT_MS } from "./connection-state.mjs";
 
 export class EventSourceManager {
   /** @type {import("./connection-state.mjs").EventSourceConfig} */
@@ -151,6 +151,53 @@ export class EventSourceManager {
   /** @param {() => void} fn */
   onEscalated(fn) { this.#escalatedListeners.push(fn); }
 
+  // ─── Health probe ─────────────────────────────────────────
+
+  /**
+   * Quick server reachability check before opening SSE.
+   * Uses a fast fetch (not the SDK, to avoid heavy setup) with a configurable
+   * timeout. Returns the URL that passed the probe, or null if unreachable.
+   *
+   * Inspired by P4OC's ConnectionManager probe: listProjects() → then SSE.
+   *
+   * @returns {Promise<string | null>} the base URL that passed, or null
+   */
+  async #healthProbe() {
+    const url = this.#config.baseUrl.replace(/\/$/, "");
+    const probeUrl = `${url}/api/health`;
+    const timeout = this.#config.healthProbeTimeoutMs ?? DEFAULT_HEALTH_PROBE_TIMEOUT_MS;
+
+    console.debug(`[EventSource] health probe → ${probeUrl} (timeout=${timeout}ms)`);
+
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeout);
+
+      const response = await fetch(probeUrl, {
+        signal: controller.signal,
+        // Only fetch headers — response body not needed
+        method: "HEAD",
+      });
+
+      clearTimeout(timer);
+
+      if (response.ok) {
+        console.debug(`[EventSource] health probe passed (HTTP ${response.status})`);
+        return url;
+      }
+
+      console.warn(`[EventSource] health probe failed: HTTP ${response.status} — will try SSE anyway`);
+      return url; // Non-2xx: server is reachable, SSE might work; don't block
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        console.warn(`[EventSource] health probe timed out after ${timeout}ms — will try SSE anyway`);
+      } else {
+        console.warn(`[EventSource] health probe error: ${error?.message || error} — will try SSE anyway`);
+      }
+      return url; // Probe failure is non-blocking: server may not expose /api/health
+    }
+  }
+
   // ─── Internal ─────────────────────────────────────────────
 
   /**
@@ -165,6 +212,13 @@ export class EventSourceManager {
     this.#errorFiredSinceOpen = false;
 
     try {
+      // Health probe: quick reachability check before opening SSE.
+      // Non-blocking on failure — SSE is attempted regardless.
+      await this.#healthProbe();
+
+      // Stale check after probe (may have been disconnected during await)
+      if (gen !== this.#generation || this.#isShutdown) return;
+
       const result = await this.#client.event.subscribe({
         query: { directory: this.#config.directory },
         signal: controller.signal,
@@ -302,7 +356,9 @@ export class EventSourceManager {
 
   #abortStream() {
     if (this.#activeStream) {
-      try { this.#activeStream.controller.abort(); } catch {}
+      try { this.#activeStream.controller.abort(); } catch (e) {
+        console.warn("[EventSource] error aborting SSE stream:", e?.message || e);
+      }
       this.#activeStream = null;
     }
   }
