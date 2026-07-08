@@ -23,6 +23,11 @@ import {
 import { deleteAgent, isValidAgentName, readAgent, readAgentsSync, writeAgent } from "./agents/agent-manager.mjs";
 import { addRepo, deleteRepo, ensureRepoRoot, listRepos, retryClone } from "./repo/repo-manager.mjs";
 import { initOpencodeClient, getClient } from "./opencode-client.mjs";
+import { ConnectionManager } from "./connection-manager.mjs";
+import { ConnectionState } from "./connection-state.mjs";
+
+/** @type {ConnectionManager | null} */
+let connectionManager = null;
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const projectRoot = resolve(__dirname, "..");
@@ -208,6 +213,11 @@ async function main() {
   await ensureRepoRoot();
   opencodeServer = await startOpencode();
   initOpencodeClient(opencodeServer.url, opencodePassword, opencodeUsername);
+  connectionManager = new ConnectionManager({
+    baseUrl: opencodeServer.url,
+    directory: opencodeDirectory,
+    password: opencodePassword,
+  });
 
   const server = createServer(async (req, res) => {
     try {
@@ -334,6 +344,12 @@ async function restartOpencode() {
   opencodeServer?.close();
   opencodeServer = await startOpencode();
   initOpencodeClient(opencodeServer.url, opencodePassword, opencodeUsername);
+  connectionManager?.shutdown();
+  connectionManager = new ConnectionManager({
+    baseUrl: opencodeServer.url,
+    directory: opencodeDirectory,
+    password: opencodePassword,
+  });
 }
 
 async function discoverSkillPaths() {
@@ -1053,7 +1069,7 @@ async function route(req, res) {
 
   if (url.pathname === "/api/sessions" && req.method === "GET") {
     const includeArchived = parseBoolean(url.searchParams.get("archived") || "false");
-    const sessions = await getClient().session.list({
+    const sessions = await connectionManager.client.session.list({
       query: {
         directory: opencodeDirectory,
         roots: url.searchParams.get("roots") ?? "true",
@@ -1068,7 +1084,7 @@ async function route(req, res) {
 
   if (url.pathname === "/api/sessions" && req.method === "POST") {
     const body = await readJson(req);
-    const session = await getClient().session.create({
+    const session = await connectionManager.client.session.create({
       query: { directory: opencodeDirectory },
       body: {
         title: body.title || "Aibase session",
@@ -1087,7 +1103,7 @@ async function route(req, res) {
       return sendJson(res, 400, { error: "empty_title", message: "Session title is required." });
     }
 
-    const result = await getClient().session.update({
+    const result = await connectionManager.client.session.update({
       path: { id: titleMatch[1] },
       query: { directory: opencodeDirectory },
       body: { title },
@@ -1100,7 +1116,7 @@ async function route(req, res) {
     const body = await readJson(req);
     const archived = body.archived === undefined ? true : parseBoolean(String(body.archived));
 
-    const result = await getClient().session.update({
+    const result = await connectionManager.client.session.update({
       path: { id: archiveMatch[1] },
       query: { directory: opencodeDirectory },
       body: {
@@ -1114,7 +1130,7 @@ async function route(req, res) {
 
   const messageMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)\/messages$/);
   if (messageMatch && req.method === "GET") {
-    const messages = await getClient().session.messages({
+    const messages = await connectionManager.client.session.messages({
       path: { id: messageMatch[1] },
       query: {
         directory: opencodeDirectory,
@@ -1143,7 +1159,7 @@ async function route(req, res) {
       return sendJson(res, 400, { error: "empty_prompt", message: "Prompt text is required." });
     }
 
-    const result = await getClient().session.prompt({
+    const result = await connectionManager.client.session.prompt({
       path: { id: promptMatch[1] },
       query: { directory: opencodeDirectory },
       body: {
@@ -1177,7 +1193,7 @@ async function respondPermission(req, res, sessionID, permissionID) {
   }
 
   try {
-    await getClient().postSessionIdPermissionsPermissionId({
+    await connectionManager.client.postSessionIdPermissionsPermissionId({
       path: { id: sessionID, permissionID },
       query: { directory: opencodeDirectory },
       body: { response },
@@ -1246,12 +1262,17 @@ async function streamPrompt(req, res, sessionID) {
   let sawPromptActivity = false;
   let finished = false;
   let finishTimer = null;
-  let completionPoll = null;
-  let completionPollRunning = false;
+
+  // ─── Generation tracking for stale event protection ──────
+  let generation = 0;
+  let consecutiveErrors = 0;
+  const MAX_CONSECUTIVE_ERRORS = 15;
+  const RETRY_DELAY_MS = 3000;
+  const MAX_RETRY_DELAY_MS = 30000;
 
   const emitFinalMessages = async () => {
     try {
-      const messages = await getClient().session.messages({
+      const messages = await connectionManager.client.session.messages({
         path: { id: sessionID },
         query: { directory: opencodeDirectory, limit: 100 },
         signal: abortController.signal,
@@ -1269,7 +1290,6 @@ async function streamPrompt(req, res, sessionID) {
     finished = true;
     clearTimeout(timeout);
     if (finishTimer) clearTimeout(finishTimer);
-    if (completionPoll) clearInterval(completionPoll);
     await emitFinalMessages();
     writeTrace({ kind: "done", label: "响应已完成" }, "finish");
     writeEvent("done", {});
@@ -1297,39 +1317,37 @@ async function streamPrompt(req, res, sessionID) {
     }
   };
 
-  const startCompletionPoll = () => {
-    if (completionPoll || finished) return;
-    completionPoll = setInterval(async () => {
-      if (completionPollRunning || finished || abortController.signal.aborted || !activeAssistantMessageID) {
-        return;
-      }
-
-      completionPollRunning = true;
-      try {
-        if (await hasCompletedAssistantMessage(sessionID, activeAssistantMessageID, abortController.signal)) {
-          await finish();
-        }
-      } catch {
-        // The normal event stream may still deliver a finish signal; keep the stream open.
-      } finally {
-        completionPollRunning = false;
-      }
-    }, 1000);
+  /**
+   * Backoff delay: initial * 2^(attempt-1), capped at max, 25% jitter.
+   */
+  const backoffDelay = (attempt) => {
+    const raw = Math.min(RETRY_DELAY_MS * Math.pow(2, attempt - 1), MAX_RETRY_DELAY_MS);
+    const jitter = 1 - Math.random() * 0.25;
+    return Math.floor(raw * jitter);
   };
 
-  try {
-    writeEvent("phase", { label: "正在连接" });
-    writeTrace({ label: "正在连接 opencode 事件流" }, "connect");
+  /**
+   * Run the SSE event loop for a given generation.
+   * On stream end/error, auto-reconnects with backoff unless max errors reached.
+   */
+  const runEventLoop = async (gen) => {
+    if (finished || abortController.signal.aborted) return;
 
-    const eventStream = await getClient().event.subscribe({
-      query: { directory: opencodeDirectory },
-      signal: abortController.signal,
-    });
-    writeTrace({ label: "事件流已连接，等待模型响应" }, "connected");
+    try {
+      const eventStream = await connectionManager.client.event.subscribe({
+        query: { directory: opencodeDirectory },
+        signal: abortController.signal,
+      });
 
-    const eventLoop = (async () => {
+      // Stale check — if generation changed during subscribe, abort
+      if (gen !== generation || finished) return;
+
+      // Reset error counter on successful connection
+      consecutiveErrors = 0;
+
       for await (const event of eventStream.stream) {
-        if (finished) break;
+        if (gen !== generation || finished) break; // stale generation
+
         await handlePromptEvent({
           event,
           sessionID,
@@ -1352,14 +1370,58 @@ async function streamPrompt(req, res, sessionID) {
           finish,
           finishSoon,
           cancelFinish,
-          startCompletionPoll,
+          startCompletionPoll: null,  // removed — no polling needed
         });
       }
-    })();
 
+      // Stream ended cleanly — reconnect with backoff if not finished
+      if (!finished && gen === generation) {
+        consecutiveErrors++;
+        if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+          console.warn(`[streamPrompt] ${consecutiveErrors} consecutive errors — disconnecting`);
+          writeTrace({ kind: "error", label: "流式连接失败过多，已断开" }, "sse-escalated");
+          writeEvent("error", { message: "Stream connection lost after too many retries." });
+          await finish();
+        } else {
+          const delay = backoffDelay(consecutiveErrors);
+          console.debug(`[streamPrompt] stream ended cleanly, reconnecting in ${delay}ms (attempt ${consecutiveErrors})`);
+          await new Promise(r => setTimeout(r, delay));
+          if (!finished && gen === generation) await runEventLoop(gen);
+        }
+      }
+    } catch (error) {
+      if (error?.name === "AbortError" || abortController.signal.aborted) return;
+      if (gen !== generation || finished) return;
+
+      consecutiveErrors++;
+      if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+        console.warn(`[streamPrompt] ${consecutiveErrors} consecutive errors (last: ${error.message}) — disconnecting`);
+        writeTrace({ kind: "error", label: "流式连接失败过多，已断开", detail: error.message }, "sse-escalated");
+        writeEvent("error", { message: "Stream connection failed after too many retries." });
+        await finish();
+      } else {
+        const delay = backoffDelay(consecutiveErrors);
+        console.debug(`[streamPrompt] SSE error (${consecutiveErrors}): ${error.message}, reconnecting in ${delay}ms`);
+        await new Promise(r => setTimeout(r, delay));
+        if (!finished && gen === generation) await runEventLoop(gen);
+      }
+    }
+  };
+
+  try {
+    writeEvent("phase", { label: "正在连接" });
+    writeTrace({ label: "正在连接 opencode 事件流" }, "connect");
+
+    // Subscribe SSE first (before sending prompt) — no events lost
+    generation++;
+    const currentGen = generation;
+    const eventLoopDone = runEventLoop(currentGen);
+
+    writeTrace({ label: "事件流已连接，等待模型响应" }, "connected");
     writeEvent("phase", { label: "正在分析" });
     writeTrace({ label: "请求已发送给 opencode" }, "prompt-send");
-    const promptPromise = getClient().session.promptAsync({
+
+    const promptPromise = connectionManager.client.session.promptAsync({
       path: { id: sessionID },
       query: { directory: opencodeDirectory },
       body: {
@@ -1375,7 +1437,7 @@ async function streamPrompt(req, res, sessionID) {
     });
 
     await promptPromise;
-    await eventLoop;
+    await eventLoopDone;
   } catch (error) {
     if (!finished && (!abortController.signal.aborted || timedOut)) {
       writeEvent("error", {
@@ -1396,12 +1458,12 @@ async function streamPrompt(req, res, sessionID) {
   } finally {
     clearTimeout(timeout);
     if (finishTimer) clearTimeout(finishTimer);
-    if (completionPoll) clearInterval(completionPoll);
   }
 }
 
 async function handlePromptEvent(context) {
   const { event, sessionID, messageRoles, assistantParts, writeEvent, writeTrace, finishSoon, cancelFinish, startCompletionPoll } = context;
+  const callPoll = startCompletionPoll ? () => callPoll() : () => {};
   const properties = event.properties ?? {};
   const eventSessionID = properties.sessionID
     || properties.info?.sessionID
@@ -1419,7 +1481,7 @@ async function handlePromptEvent(context) {
       if (info.role === "assistant") {
         context.activeAssistantMessageID = info.id;
         context.sawPromptActivity = true;
-        startCompletionPoll();
+        callPoll();
         if (info.finish === "tool-calls") {
           writeTrace({ kind: "tool", label: "模型准备调用工具" }, `tool-calls:${info.id}`);
           writeEvent("phase", { label: "正在调用工具" });
@@ -1467,7 +1529,7 @@ async function handlePromptEvent(context) {
             label: `正在生成回复（约 ${text.length} 字）`,
           }, `generate:${part.messageID}:${Math.floor(text.length / 180)}`);
           writeEvent("phase", { label: "正在生成" });
-          startCompletionPoll();
+          callPoll();
         }
       } else if (part.type === "step-finish") {
         writeTrace({ kind: "done", label: "当前推理步骤完成" }, `step-finish:${part.messageID}:${part.id || ""}`);
@@ -1480,7 +1542,7 @@ async function handlePromptEvent(context) {
         }, `tool:${part.messageID}:${part.id || part.toolCallID || part.callID || part.type}:${part.state?.status || part.status || ""}`);
         writeEvent("phase", { label: "正在调用工具" });
       } else if (assistantParts.has(part.messageID)) {
-        startCompletionPoll();
+        callPoll();
       }
       break;
     }
@@ -1537,26 +1599,6 @@ async function handlePromptEvent(context) {
     default:
       break;
   }
-}
-
-async function hasCompletedAssistantMessage(sessionID, messageID, signal) {
-  const messages = await getClient().session.messages({
-    path: { id: sessionID },
-    query: { directory: opencodeDirectory, limit: 100 },
-    signal,
-  });
-
-  const assistantMessages = (messages || []).filter((message) => message.info?.role === "assistant");
-  const candidates = messageID
-    ? assistantMessages.filter((message) => message.info?.id === messageID)
-    : assistantMessages.slice(-1);
-
-  return candidates.some((message) => {
-    if (message.info?.role !== "assistant") return false;
-    if (message.info?.finish && message.info.finish !== "tool-calls") return true;
-    if (message.info?.time?.completed) return true;
-    return (message.parts || []).some((part) => part.type === "step-finish");
-  });
 }
 
 function writeSseHead(res) {
