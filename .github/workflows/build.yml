@@ -79,7 +79,7 @@ jobs:
 
       - name: Push chart to GHCR (OCI)
         run: |
-          CHART_TGZ=$(ls charts/aibase-*.tgz)
+          CHART_TGZ=$(ls -t charts/aibase-*.tgz | head -1)
           helm push "$CHART_TGZ" "oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts"
 
       - name: Create GitHub Release

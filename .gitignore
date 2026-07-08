@@ -5,3 +5,4 @@ registry/bundles/
 *.db
 *.db-shm
 *.db-wal
+charts/*.tgz
