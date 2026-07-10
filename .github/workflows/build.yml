@@ -195,21 +195,38 @@ jobs:
                 failureThreshold: 3
             EOF
 
+            # drawing-board 配置 (use unquoted EOF for IMAGE_TAG expansion)
+            cat > /tmp/drawing-board-values.yaml << EOF
+            drawingBoard:
+              enabled: true
+              replicaCount: 1
+              containerPort: 5173
+              image:
+                repository: ghcr.io/${{ github.repository_owner }}/drawing-board
+                tag: "${IMAGE_TAG}"
+                pullPolicy: IfNotPresent
+              aibaseBackendUrl: "http://aibase:3001"
+              service:
+                type: ClusterIP
+                port: 80
+              ingress:
+                enabled: true
+                className: traefik
+                hosts:
+                  - host: draw.us.xiaoyxq.top
+                    paths:
+                      - path: /
+                        pathType: Prefix
+            EOF
+
             sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml helm upgrade --install aibase \
               oci://ghcr.io/${{ github.repository_owner }}/charts/aibase \
               --namespace aibase \
               --reuse-values \
               -f /tmp/opencode-web-values.yaml \
+              -f /tmp/drawing-board-values.yaml \
               --set image.repository="ghcr.io/${{ github.repository_owner }}/aibase" \
               --set image.tag="${IMAGE_TAG}" \
               --set image.pullPolicy=IfNotPresent \
-              --set drawingBoard.enabled=true \
-              --set drawingBoard.image.repository="ghcr.io/${{ github.repository_owner }}/drawing-board" \
-              --set drawingBoard.image.tag="${IMAGE_TAG}" \
-              --set drawingBoard.image.pullPolicy=IfNotPresent \
-              --set drawingBoard.aibaseBackendUrl="http://aibase:3001" \
-              --set drawingBoard.ingress.enabled=true \
-              --set drawingBoard.ingress.className=traefik \
-              --set drawingBoard.ingress.hosts[0].host=draw.us.xiaoyxq.top \
               --atomic \
               --wait
