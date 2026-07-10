@@ -1,0 +1,52 @@
+node_modules
+dist
+.git
+.gitignore
+.github
+.vscode
+.idea
+.claude
+.DS_Store
+*.log
+*.tsbuildinfo
+
+# Build contexts / infra
+charts
+Dockerfile
+.dockerignore
+
+# Per-app: drawing-board
+apps/drawing-board/node_modules
+apps/drawing-board/dist
+apps/drawing-board/.env
+apps/drawing-board/.env.local
+
+# Per-package: aibase
+packages/aibase/node_modules
+packages/aibase/.env
+packages/aibase/.git
+packages/aibase/charts
+packages/aibase/Dockerfile
+packages/aibase/docker-compose.yml
+packages/aibase/docker-entrypoint.sh
+packages/aibase/docs
+packages/aibase/manifest
+packages/aibase/registry
+packages/aibase/repo
+packages/aibase/scripts
+packages/aibase/tests
+packages/aibase/knowledge
+packages/aibase/agents
+packages/aibase/skills
+packages/aibase/mcp
+packages/aibase/public
+
+# Per-package: aibase-sdk
+packages/aibase-sdk/node_modules
+packages/aibase-sdk/dist
+
+# Root: keep workspace manifest + compose, ignore everything else under root
+findings.md
+progress.md
+task_plan.md
+README.md

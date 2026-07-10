@@ -1,0 +1,187 @@
+/* ================================================================
+ * Sessions rail — toolbar + session cards
+ * ================================================================ */
+
+.toolbar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.toolbar #restart-runtime {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-3);
+  min-height: 30px;
+  border-radius: var(--r-sm);
+  background: transparent;
+  border-color: var(--line-soft);
+}
+
+.toolbar #restart-runtime:hover:not(:disabled) {
+  color: var(--danger);
+  border-color: var(--danger-soft);
+  background: var(--danger-soft);
+}
+
+.session-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0 -6px;
+  padding: 2px 6px 18px;
+}
+
+/* ================================================================
+ * Session item — horizontal card with archive chip
+ * ================================================================ */
+
+.session-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px;
+  align-items: stretch;
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  background: transparent;
+  padding: 0;
+  transition:
+    background-color var(--t-fast) var(--ease-out),
+    border-color var(--t-fast) var(--ease-out),
+    transform var(--t-fast) var(--ease-out);
+  position: relative;
+}
+
+.session-item:hover {
+  background: color-mix(in srgb, var(--bg-1) 70%, transparent);
+  border-color: var(--line-soft);
+}
+
+.session-item[aria-current="true"] {
+  background: color-mix(in srgb, var(--brand-500) 8%, var(--bg-1));
+  border-color: color-mix(in srgb, var(--brand-500) 28%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--brand-500) 14%, transparent),
+    0 1px 2px rgba(99, 102, 241, 0.10);
+}
+
+.session-item[aria-current="true"]::before {
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 22px;
+  background: linear-gradient(180deg, var(--brand-400), var(--brand-600));
+  border-radius: 0 3px 3px 0;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--brand-500) 50%, transparent);
+}
+
+.session-main-button {
+  width: 100%;
+  min-height: 52px;
+  border: 0;
+  border-radius: calc(var(--r-md) - 2px);
+  background: transparent;
+  color: var(--ink-1);
+  padding: 9px 12px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease-out);
+}
+
+.session-main-button:hover:not(:disabled) {
+  background: transparent;
+}
+
+.session-main {
+  display: block;
+  min-width: 0;
+}
+
+.session-main strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-0);
+  letter-spacing: -0.008em;
+}
+
+.session-item[aria-current="true"] .session-main strong {
+  color: var(--brand-700);
+}
+
+[data-theme="dark"] .session-item[aria-current="true"] .session-main strong {
+  color: var(--brand-300);
+}
+
+.session-main span {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.session-archive {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  align-self: center;
+  height: 32px;
+  min-height: 32px;
+  margin-right: 4px;
+  border: 0;
+  border-radius: var(--r-sm);
+  padding: 0;
+  background: transparent;
+  color: var(--ink-4);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--t-fast) var(--ease-out),
+    background-color var(--t-fast) var(--ease-out),
+    color var(--t-fast) var(--ease-out);
+}
+
+.session-item:hover .session-archive,
+.session-item:focus-within .session-archive {
+  opacity: 1;
+}
+
+.session-archive:hover:not(:disabled) {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+/* Empty state for sessions */
+.session-list:empty::after {
+  content: "No conversations yet";
+  display: block;
+  text-align: center;
+  color: var(--ink-3);
+  font-size: 12px;
+  padding: 32px 16px;
+  border: 1px dashed var(--line);
+  border-radius: var(--r-md);
+  background: transparent;
+  letter-spacing: -0.005em;
+}

@@ -1,0 +1,288 @@
+/* ================================================================
+ * Layout shell — three-column workspace
+ * Rail (sessions) | Conversation (main) | Panel (marketplace/skills)
+ * ================================================================ */
+
+.shell {
+  display: grid;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--panel-w);
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
+  gap: 0;
+}
+
+/* ================================================================
+ * Left rail
+ * ================================================================ */
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--line-soft);
+  background: color-mix(in srgb, var(--bg-1) 80%, transparent);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  padding: 18px 16px 16px;
+  overflow: hidden;
+}
+
+.rail > .brand {
+  flex: 0 0 auto;
+  padding: 6px 6px 14px;
+  border-bottom: 1px solid var(--line-soft);
+  margin-bottom: 14px;
+}
+
+/* Brand block */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.brand > div {
+  min-width: 0;
+}
+
+.brand-mark {
+  flex: 0 0 36px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-md);
+  background: linear-gradient(135deg, var(--brand-500), #8b5cf6);
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.30),
+    0 4px 14px rgba(99, 102, 241, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+  position: relative;
+}
+
+.brand-mark::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: calc(var(--r-md) + 2px);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.4), transparent 50%);
+  z-index: -1;
+  opacity: 0.5;
+}
+
+.brand h1 {
+  font-size: 15px;
+  line-height: 1.2;
+  margin: 0;
+  font-weight: 700;
+  color: var(--ink-0);
+  letter-spacing: -0.015em;
+}
+
+.brand p {
+  margin: 2px 0 0;
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 500;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: 0.005em;
+}
+
+/* ================================================================
+ * Conversation main column
+ * ================================================================ */
+
+.conversation {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-width: 0;
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+/* Topbar — sticky glass bar */
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  min-height: var(--topbar-h);
+  padding: 14px 28px;
+  border-bottom: 1px solid var(--line-soft);
+  background: color-mix(in srgb, var(--bg-0) 70%, transparent);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  position: relative;
+  z-index: 5;
+}
+
+.topbar > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.eyebrow::before {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--brand-500);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-500) 18%, transparent);
+}
+
+.topbar h2 {
+  font-size: 17px;
+  margin: 0;
+  letter-spacing: -0.015em;
+  font-weight: 600;
+  color: var(--ink-0);
+  line-height: 1.2;
+  font-family: var(--font-display);
+}
+
+/* Status pill */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px 6px 10px;
+  border: 1px solid var(--line-soft);
+  background: color-mix(in srgb, var(--bg-1) 70%, transparent);
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-2);
+  box-shadow: var(--shadow-xs);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--warn);
+  position: relative;
+  flex: 0 0 8px;
+  transition: background-color var(--t-med) var(--ease-out);
+}
+
+.dot::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: inherit;
+  opacity: 0.35;
+  animation: dot-pulse 2.4s var(--ease-in-out) infinite;
+}
+
+.dot.ok { background: var(--ok); }
+.dot.warn { background: var(--warn); }
+.dot.error { background: var(--danger); }
+
+.dot.ok::before { animation-duration: 3.2s; }
+
+@keyframes dot-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.35; }
+  50% { transform: scale(1.6); opacity: 0; }
+}
+
+/* ================================================================
+ * Right panel
+ * ================================================================ */
+
+.panel {
+  border-left: 1px solid var(--line-soft);
+  background: color-mix(in srgb, var(--bg-1) 80%, transparent);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  padding: 20px 18px 24px;
+  overflow: auto;
+}
+
+.panel section + section { margin-top: 28px; }
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.panel-head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel h2 {
+  margin: 0;
+  letter-spacing: -0.012em;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.panel-head span {
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  background: var(--bg-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.panel-meta {
+  margin: 0 0 10px;
+  color: var(--ink-3);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.panel-action {
+  width: 100%;
+  margin-bottom: 12px;
+  font-size: 13px;
+  justify-content: center;
+  border-style: dashed;
+  background: transparent;
+  color: var(--ink-2);
+  border-color: var(--line);
+}
+
+.panel-action:hover:not(:disabled) {
+  background: var(--bg-2);
+  border-color: var(--brand-500);
+  border-style: solid;
+  color: var(--brand-600);
+}

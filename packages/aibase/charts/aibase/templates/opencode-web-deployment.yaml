@@ -1,0 +1,107 @@
+{{- if .Values.opencodeWeb.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "aibase.fullname" . }}-web
+  labels:
+    {{- include "aibase.labels" . | nindent 4 }}
+    app.kubernetes.io/component: opencode-web
+spec:
+  replicas: {{ .Values.opencodeWeb.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "aibase.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: opencode-web
+  template:
+    metadata:
+      {{- with .Values.opencodeWeb.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "aibase.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: opencode-web
+        {{- with .Values.opencodeWeb.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "aibase.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: opencode-web
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /app/docker-entrypoint.sh
+          args:
+            - opencode
+            - web
+            - --hostname
+            - {{ .Values.opencodeWeb.webHost | quote }}
+            - --port
+            - {{ .Values.opencodeWeb.webPort | quote }}
+            - --cors
+            - {{ .Values.opencodeWeb.webCors | quote }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.opencodeWeb.containerPort }}
+              protocol: TCP
+          env:
+            {{- range $name, $value := .Values.opencodeWeb.env }}
+            - name: {{ $name }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- if .Values.opencodeWeb.serverAuth.enabled }}
+            - name: OPENCODE_SERVER_USERNAME
+              value: {{ .Values.opencodeWeb.serverAuth.username | quote }}
+            {{- if .Values.opencodeWeb.serverAuth.existingSecret }}
+            - name: OPENCODE_SERVER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.opencodeWeb.serverAuth.existingSecret }}
+                  key: {{ .Values.opencodeWeb.serverAuth.passwordSecretKey }}
+            {{- end }}
+            {{- end }}
+            {{- with .Values.opencodeWeb.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- if or (include "aibase.hasManagedSecret" .) .Values.credentials.existingSecret .Values.opencodeWeb.extraEnvFrom }}
+          envFrom:
+            {{- if include "aibase.hasManagedSecret" . }}
+            - secretRef:
+                name: {{ include "aibase.fullname" . }}
+            {{- end }}
+            {{- if .Values.credentials.existingSecret }}
+            - secretRef:
+                name: {{ .Values.credentials.existingSecret }}
+            {{- end }}
+            {{- with .Values.opencodeWeb.extraEnvFrom }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- end }}
+          livenessProbe:
+            {{- toYaml .Values.opencodeWeb.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.opencodeWeb.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.opencodeWeb.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

@@ -1,0 +1,66 @@
+{{- if .Values.drawingBoard.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "aibase.fullname" . }}-drawing-board
+  labels:
+    {{- include "aibase.labels" . | nindent 4 }}
+    app.kubernetes.io/component: drawing-board
+spec:
+  replicas: {{ .Values.drawingBoard.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "aibase.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: drawing-board
+  template:
+    metadata:
+      {{- with .Values.drawingBoard.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "aibase.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: drawing-board
+        {{- with .Values.drawingBoard.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: drawing-board
+          image: "{{ .Values.drawingBoard.image.repository }}:{{ .Values.drawingBoard.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.drawingBoard.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.drawingBoard.containerPort }}
+              protocol: TCP
+          env:
+            - name: DRAWING_BOARD_HOST
+              value: "0.0.0.0"
+            - name: AIBASE_BACKEND_URL
+              value: {{ .Values.drawingBoard.aibaseBackendUrl | quote }}
+            {{- with .Values.drawingBoard.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          livenessProbe:
+            {{- toYaml .Values.drawingBoard.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.drawingBoard.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.drawingBoard.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

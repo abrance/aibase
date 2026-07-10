@@ -1,8 +1,17 @@
 node_modules/
 .env
-registry/bundles/
 *.log
 *.db
 *.db-shm
 *.db-wal
-charts/*.tgz
+*.tgz
+registry/bundles/
+
+# Build outputs
+apps/*/dist/
+packages/*/dist/
+*.tsbuildinfo
+
+# Tooling state
+.omo/
+.playwright-mcp/

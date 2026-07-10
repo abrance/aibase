@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Aibase</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="stylesheet" href="/css/sessions.css">
+    <link rel="stylesheet" href="/css/chat.css">
+    <link rel="stylesheet" href="/css/composer.css">
+    <link rel="stylesheet" href="/css/panels.css">
+    <link rel="stylesheet" href="/css/premium.css">
+    <link rel="stylesheet" href="/css/modals.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+  </head>
+  <body>
+    <div id="app" class="shell">
+      <aside class="rail">
+        <div class="brand">
+          <div class="brand-mark">A</div>
+          <div>
+            <h1>Aibase</h1>
+            <p id="workspace">Loading workspace</p>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <button id="new-session" class="primary" type="button">New</button>
+          <button id="refresh" class="ghost" type="button">Refresh</button>
+          <button id="restart-runtime" class="ghost" type="button">Restart Runtime</button>
+        </div>
+
+        <div id="sessions" class="session-list" aria-label="Sessions"></div>
+      </aside>
+
+      <main class="conversation">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">AI workspace</p>
+            <h2 id="session-title">Aibase Console</h2>
+          </div>
+          <div class="status">
+            <button id="theme-toggle" class="theme-toggle" type="button" title="切换主题">☀</button>
+            <span id="kernel-dot" class="dot"></span>
+            <span id="kernel-status">Starting</span>
+          </div>
+        </header>
+
+        <section id="messages" class="messages" aria-live="polite"></section>
+        <button id="jump-latest" class="jump-latest" type="button" hidden>跳转到最新消息</button>
+
+        <form id="composer" class="composer">
+          <div id="knowledge-references" class="reference-strip" hidden>
+            <div class="reference-strip-head">
+              <strong>已引用</strong>
+              <button id="clear-knowledge-references" class="ghost inline-ghost" type="button">清空</button>
+            </div>
+            <div id="knowledge-reference-tags" class="reference-tags"></div>
+          </div>
+          <textarea id="prompt" rows="3" placeholder="Ask Aibase"></textarea>
+          <div class="composer-actions">
+            <span id="send-state"></span>
+            <div class="composer-controls">
+              <div class="model-picker" id="model-picker">
+                <span>Model</span>
+                <button id="model-toggle" class="ghost model-toggle" type="button" aria-expanded="false"></button>
+                <div id="model-menu" class="model-menu">
+                  <input id="model-search" class="model-search" type="text" placeholder="Search models">
+                  <div id="model-options" class="model-options"></div>
+                </div>
+              </div>
+              <button id="send" class="primary" type="submit">Send</button>
+            </div>
+          </div>
+        </form>
+      </main>
+
+      <aside class="panel">
+        <section>
+          <div class="panel-head">
+            <h2>Marketplace</h2>
+            <button id="marketplace-archive" class="ghost panel-upload-btn" type="button">归档</button>
+          </div>
+          <div id="marketplace-list" class="skills"></div>
+        </section>
+
+        <section>
+          <div class="panel-head">
+            <h2>Skills</h2>
+            <div class="panel-head-actions">
+              <button id="upload-skills" class="ghost panel-upload-btn" type="button">上传到市场</button>
+              <span id="skill-count">0</span>
+            </div>
+          </div>
+          <div id="skill-dropzone" class="skill-dropzone" tabindex="0" role="button">
+            <strong>导入 ZIP</strong>
+            <span id="skill-upload-state">同名覆盖</span>
+            <input id="skill-file" type="file" accept=".zip,application/zip" hidden>
+          </div>
+          <div id="skills" class="skills"></div>
+        </section>
+
+        <section>
+          <div class="panel-head">
+            <h2>MCP</h2>
+            <div class="panel-head-actions">
+              <button id="upload-mcp" class="ghost panel-upload-btn" type="button">上传到市场</button>
+              <span id="mcp-count">0</span>
+            </div>
+          </div>
+          <div id="mcp-dropzone" class="skill-dropzone" tabindex="0" role="button">
+            <strong>导入文档</strong>
+            <span id="mcp-upload-state">同名覆盖</span>
+            <input id="mcp-file" type="file" accept=".md,.markdown,text/markdown,text/plain" hidden>
+          </div>
+          <div id="mcp-docs" class="skills"></div>
+        </section>
+
+        <section>
+          <div class="panel-head">
+            <h2>Agents</h2>
+            <div class="panel-head-actions">
+              <button id="upload-agents" class="ghost panel-upload-btn" type="button">上传到市场</button>
+              <span id="agent-count">0</span>
+            </div>
+          </div>
+          <button id="new-agent" class="ghost panel-action" type="button">+ New Agent</button>
+          <div id="agents" class="skills"></div>
+        </section>
+
+        <section>
+          <div class="panel-head">
+            <h2>知识库</h2>
+            <div class="panel-head-actions">
+              <button id="upload-knowledge" class="ghost panel-upload-btn" type="button">上传到市场</button>
+              <span id="knowledge-count">0</span>
+            </div>
+          </div>
+          <p id="knowledge-root" class="panel-meta">-</p>
+          <div class="knowledge-actions">
+            <button id="new-knowledge-folder" class="ghost panel-action" type="button">+ 新建目录</button>
+            <button id="new-knowledge-file" class="ghost panel-action" type="button">+ 新建知识</button>
+          </div>
+          <div id="knowledge-tree" class="knowledge-tree"></div>
+        </section>
+
+        <section>
+          <div class="panel-head">
+            <h2>代码库</h2>
+            <span id="repo-count">0</span>
+          </div>
+          <button id="new-repo" class="ghost panel-action" type="button">+ 添加代码库</button>
+          <div id="repos" class="skills"></div>
+        </section>
+
+        <section>
+          <div class="panel-head">
+            <h2>Kernel</h2>
+          </div>
+          <dl class="facts">
+            <div>
+              <dt>Status</dt>
+              <dd id="fact-status">Unknown</dd>
+            </div>
+            <div>
+              <dt>Skills path</dt>
+              <dd id="fact-skills">-</dd>
+            </div>
+            <div>
+              <dt>MCP path</dt>
+              <dd id="fact-mcp">-</dd>
+            </div>
+            <div>
+              <dt>Agents path</dt>
+              <dd id="fact-agents">-</dd>
+            </div>
+            <div>
+              <dt>Knowledge path</dt>
+              <dd id="fact-knowledge">-</dd>
+            </div>
+            <div>
+              <dt>Env URL</dt>
+              <dd id="fact-env-url">-</dd>
+            </div>
+          </dl>
+        </section>
+      </aside>
+    </div>
+
+    <div id="agent-modal" class="modal" hidden>
+      <div class="modal-backdrop"></div>
+      <form class="modal-panel" id="agent-form">
+        <h3 id="agent-modal-title">New Agent</h3>
+
+        <label>
+          <span>Name</span>
+          <input id="agent-name" type="text" required pattern="[a-z0-9][a-z0-9_-]{0,63}" placeholder="e.g. my-agent">
+        </label>
+
+        <label>
+          <span>Display Name</span>
+          <input id="agent-display-name" type="text" placeholder="My Agent">
+        </label>
+
+        <label>
+          <span>Mode</span>
+          <select id="agent-mode">
+            <option value="subagent">subagent — 被主 agent 委托调用（@提及）</option>
+            <option value="primary">primary — Tab 切换的主 agent</option>
+            <option value="all">all — 两者都是</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Description</span>
+          <input id="agent-description" type="text" required placeholder="What this agent does">
+        </label>
+
+        <label>
+          <span>Prompt</span>
+          <textarea id="agent-prompt" rows="6" placeholder="You are a ..."></textarea>
+        </label>
+
+        <label>
+          <span>Model (optional)</span>
+          <input id="agent-model" type="text" placeholder="e.g. openai/gpt-4">
+        </label>
+
+        <label class="checkbox-label">
+          <input id="agent-enabled" type="checkbox" checked>
+          <span>Enabled</span>
+        </label>
+
+        <div class="modal-actions">
+          <button id="agent-modal-cancel" class="ghost" type="button">Cancel</button>
+          <button id="agent-modal-save" class="primary" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="knowledge-modal" class="modal" hidden>
+      <div class="modal-backdrop"></div>
+      <form class="modal-panel" id="knowledge-form">
+        <h3 id="knowledge-modal-title">New Knowledge</h3>
+
+        <label>
+          <span>类型</span>
+          <select id="knowledge-kind">
+            <option value="folder">目录</option>
+            <option value="file">文件</option>
+          </select>
+        </label>
+
+        <label>
+          <span>父目录</span>
+          <input id="knowledge-parent" type="text" placeholder="例如 runbook 或留空表示根目录">
+        </label>
+
+        <label>
+          <span>名称</span>
+          <input id="knowledge-name" type="text" required placeholder="例如 alarms.md 或 runbook">
+        </label>
+
+        <label id="knowledge-content-wrap">
+          <span>内容</span>
+          <textarea id="knowledge-content" rows="10" placeholder="输入知识内容"></textarea>
+        </label>
+
+        <div class="modal-actions">
+          <button id="knowledge-modal-cancel" class="ghost" type="button">Cancel</button>
+          <button id="knowledge-modal-save" class="primary" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="repo-modal" class="modal" hidden>
+      <div class="modal-backdrop"></div>
+      <form class="modal-panel" id="repo-form">
+        <h3>添加代码库</h3>
+
+        <label>
+          <span>仓库 URL *</span>
+          <input id="repo-url" type="text" required placeholder="https://github.com/user/repo.git 或 git@github.com:user/repo.git">
+        </label>
+
+        <label>
+          <span>分支 (选填)</span>
+          <input id="repo-branch" type="text" placeholder="main">
+        </label>
+
+        <label>
+          <span>克隆深度 (选填，0=完整)</span>
+          <input id="repo-depth" type="number" min="0" value="0" placeholder="0">
+        </label>
+
+        <fieldset class="repo-auth-fieldset">
+          <legend>认证信息 (选填)</legend>
+
+          <label>
+            <span>用户名</span>
+            <input id="repo-username" type="text" placeholder="git username">
+          </label>
+
+          <label>
+            <span>邮箱</span>
+            <input id="repo-email" type="email" placeholder="git email">
+          </label>
+
+          <label>
+            <span>密码</span>
+            <input id="repo-password" type="password" placeholder="HTTP 密码" autocomplete="off">
+          </label>
+
+          <label>
+            <span>Token (Personal Access Token)</span>
+            <input id="repo-token" type="password" placeholder="ghp_xxx 或 gitlab token" autocomplete="off">
+          </label>
+        </fieldset>
+
+        <label id="repo-ssh-wrap">
+          <span>SSH 私钥 (选填，用于 SSH URL)</span>
+          <textarea id="repo-ssh-key" rows="6" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----&#10;...&#10;-----END OPENSSH PRIVATE KEY-----"></textarea>
+        </label>
+
+        <div class="modal-actions">
+          <button id="repo-modal-cancel" class="ghost" type="button">Cancel</button>
+          <button id="repo-modal-save" class="primary" type="submit">添加</button>
+        </div>
+      </form>
+    </div>
+
+    
+    <input id="marketplace-upload-file" type="file" accept=".zip,application/zip" hidden>
+    <script type="module" src="/js/main.js"></script>
+  </body>
+</html>

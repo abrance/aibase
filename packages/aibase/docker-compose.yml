@@ -1,0 +1,102 @@
+services:
+  aibase:
+    image: ${AIBASE_IMAGE:-aibase:dev1.0.4}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aibase
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      # ---- Aibase ----
+      - AIBASE_HOST
+      - AIBASE_PORT
+      - AIBASE_WORKSPACE
+      - AIBASE_SKILLS_DIR
+      - AIBASE_MCP_DIR
+      - AIBASE_REPO_DIR
+      - AIBASE_MCP_AUTO_REGISTER
+      - AIBASE_CORS_ORIGIN
+      - AIBASE_OPENCODE_MODEL
+      - AIBASE_OPENCODE_SMALL_MODEL
+      - AIBASE_PROMPT_STREAM_TIMEOUT_MS
+      # ---- Provider credentials (Aibase-prefixed or standard) ----
+      - OPENAI_API_KEY
+      - AIBASE_OPENAI_API_KEY
+      - OPENAI_BASE_URL
+      - AIBASE_OPENAI_BASE_URL
+      - ANTHROPIC_API_KEY
+      - AIBASE_ANTHROPIC_API_KEY
+      - ANTHROPIC_BASE_URL
+      - AIBASE_ANTHROPIC_BASE_URL
+      - GOOGLE_GENERATIVE_AI_API_KEY
+      - GEMINI_API_KEY
+      - AIBASE_GOOGLE_GENERATIVE_AI_API_KEY
+      - AIBASE_GEMINI_API_KEY
+      - GROQ_API_KEY
+      - AIBASE_GROQ_API_KEY
+      - GROQ_BASE_URL
+      - AIBASE_GROQ_BASE_URL
+      - OPENROUTER_API_KEY
+      - AIBASE_OPENROUTER_API_KEY
+      - OPENROUTER_BASE_URL
+      - AIBASE_OPENROUTER_BASE_URL
+      - AZURE_OPENAI_API_KEY
+      - AZURE_OPENAI_ENDPOINT
+      - AZURE_OPENAI_API_VERSION
+      - AIBASE_AZURE_OPENAI_API_KEY
+      - AIBASE_AZURE_OPENAI_ENDPOINT
+      - AIBASE_AZURE_OPENAI_API_VERSION
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_SESSION_TOKEN
+      - AWS_REGION
+      - AWS_DEFAULT_REGION
+      - AIBASE_AWS_ACCESS_KEY_ID
+      - AIBASE_AWS_SECRET_ACCESS_KEY
+      - AIBASE_AWS_SESSION_TOKEN
+      - AIBASE_AWS_REGION
+      - AIBASE_AWS_DEFAULT_REGION
+      # ---- OpenAPI MCP environment routing ----
+      - AIBASE_ENV_BASE_URL
+      # ---- opencode runtime ----
+      - OPENCODE_HOST
+      - OPENCODE_PORT
+      - OPENCODE_BIN=/usr/local/bin/opencode
+      - OPENCODE_SNAPSHOT
+      - AIBASE_OPENCODE_DEFAULT_AGENT
+      - AIBASE_OPENCODE_LOG_LEVEL
+      - AIBASE_OPENCODE_SHARE
+      - AIBASE_OPENCODE_AUTOUPDATE
+      - AIBASE_OPENCODE_SNAPSHOT
+      - AIBASE_OPENCODE_ENABLED_PROVIDERS
+      - AIBASE_OPENCODE_DISABLED_PROVIDERS
+      - AIBASE_OPENCODE_PASSWORD
+      - AIBASE_OPENCODE_PROVIDER_JSON
+      - AIBASE_OPENCODE_PERMISSION_JSON
+      - AIBASE_OPENCODE_TOOL_OUTPUT_JSON
+      - AIBASE_OPENCODE_MCP_JSON
+      - AIBASE_OPENCODE_PLUGIN_JSON
+      - AIBASE_OPENCODE_AGENT_JSON
+      - AIBASE_OPENCODE_COMMAND_JSON
+      - AIBASE_OPENCODE_EXPERIMENTAL_JSON
+      - OPENCODE_CONFIG_CONTENT
+    env_file:
+      - .env
+    volumes:
+      # To override built-in skills or MCP docs, uncomment and point to your local directories:
+      # - ./skills:/app/skills:ro
+      # - ./mcp:/app/mcp:ro
+      - ${AIBASE_WORKSPACE:-.}:/workspace
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3001/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3

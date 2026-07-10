@@ -1,0 +1,26 @@
+/* Aibase modal compatibility shim - legacy CSS class names retained
+   as thin wrappers so old JS that targets .modal-panel continues to work.
+   The actual visual design lives in premium.css. */
+
+.modal { z-index: 50; }
+.modal[hidden] { display: none; }
+.modal-actions { margin-top: 6px; }
+.modal-panel textarea { min-height: 100px; }
+.modal-panel label.checkbox-label {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-1);
+}
+.modal-panel label.checkbox-label > span {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 13px;
+  font-weight: 500;
+}

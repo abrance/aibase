@@ -1,0 +1,383 @@
+/* ================================================================
+ * Aibase — Premium Design Tokens
+ * Editorial / cinematic palette inspired by Linear, Vercel, Arc.
+ * No emojis. No cheap meta-labels.
+ * ================================================================ */
+
+:root {
+  /* Brand — Indigo→Violet gradient system */
+  --brand-50:  #eef0ff;
+  --brand-100: #e0e3ff;
+  --brand-200: #c6cbff;
+  --brand-300: #a3a8ff;
+  --brand-400: #8189ff;
+  --brand-500: #6366f1;
+  --brand-600: #4f46e5;
+  --brand-700: #4338ca;
+  --brand-800: #3730a3;
+  --brand-900: #1e1b4b;
+
+  /* Neutral surface system */
+  --bg-0:       #fafafb;   /* page */
+  --bg-1:       #ffffff;   /* surface */
+  --bg-2:       #f4f5f7;   /* surface-muted */
+  --bg-3:       #ebedf0;   /* surface-hover */
+  --bg-ink:     #0a0b10;   /* ink-deep */
+  --line-soft:  #ebecf0;
+  --line:       #e2e4e9;
+  --line-bold:  #c9ccd4;
+
+  /* Ink scale */
+  --ink-0:      #0a0b10;
+  --ink-1:      #1c1d24;
+  --ink-2:      #4b4e58;
+  --ink-3:      #6b6f7c;
+  --ink-4:      #9aa0ad;
+
+  /* Semantic */
+  --ok:         #16a34a;
+  --ok-soft:    #dcfce7;
+  --warn:       #d97706;
+  --warn-soft:  #fef3c7;
+  --danger:     #dc2626;
+  --danger-soft:#fee2e2;
+  --accent:     #db6d28;
+  --accent-soft:#fde7d3;
+
+  /* Code surfaces */
+  --code-bg:        #f4f4f6;
+  --code-block-bg:  #0f1014;
+  --code-block-ink: #e6e7ec;
+
+  /* Shadows — soft layered */
+  --shadow-xs: 0 1px 2px rgba(15, 17, 28, 0.04);
+  --shadow-sm: 0 1px 2px rgba(15, 17, 28, 0.05), 0 2px 6px rgba(15, 17, 28, 0.04);
+  --shadow-md: 0 4px 12px rgba(15, 17, 28, 0.06), 0 1px 2px rgba(15, 17, 28, 0.04);
+  --shadow-lg: 0 18px 40px rgba(15, 17, 28, 0.10), 0 2px 6px rgba(15, 17, 28, 0.05);
+  --shadow-xl: 0 32px 80px rgba(15, 17, 28, 0.16), 0 4px 12px rgba(15, 17, 28, 0.06);
+  --shadow-glow: 0 0 0 1px rgba(99, 102, 241, 0.12), 0 8px 32px rgba(99, 102, 241, 0.20);
+
+  /* Radii */
+  --r-xs: 6px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 20px;
+  --r-2xl: 28px;
+  --r-pill: 999px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --t-fast: 140ms;
+  --t-med:  240ms;
+  --t-slow: 420ms;
+
+  /* Type */
+  --font-sans: "Geist", "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif;
+  --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-display: "Cabinet Grotesk", "Geist", "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Layout dims */
+  --rail-w: 296px;
+  --panel-w: 320px;
+  --topbar-h: 64px;
+}
+
+[data-theme="dark"] {
+  --bg-0:       #07080b;
+  --bg-1:       #0e1014;
+  --bg-2:       #15181f;
+  --bg-3:       #1c2029;
+  --bg-ink:     #f5f6fa;
+  --line-soft:  #181c24;
+  --line:       #232832;
+  --line-bold:  #353a45;
+
+  --ink-0:      #f5f6fa;
+  --ink-1:      #d8dae2;
+  --ink-2:      #a0a5b2;
+  --ink-3:      #777c88;
+  --ink-4:      #545864;
+
+  --brand-50:  #1a1c3a;
+  --brand-100: #212450;
+  --brand-200: #2d3175;
+  --brand-300: #4448a8;
+  --brand-400: #6366f1;
+  --brand-500: #7d80f5;
+  --brand-600: #9598f7;
+  --brand-700: #b3b6fb;
+  --brand-800: #d4d6fd;
+  --brand-900: #ecedfe;
+
+  --ok:         #4ade80;
+  --ok-soft:    #0c2417;
+  --warn:       #fbbf24;
+  --warn-soft:  #2a1f08;
+  --danger:     #f87171;
+  --danger-soft:#2a1212;
+  --accent:     #fb923c;
+  --accent-soft:#2a1a0a;
+
+  --code-bg:        #15181f;
+  --code-block-bg:  #0a0b0f;
+  --code-block-ink: #d8dae2;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.30);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.30);
+  --shadow-lg: 0 18px 40px rgba(0, 0, 0, 0.50), 0 2px 6px rgba(0, 0, 0, 0.30);
+  --shadow-xl: 0 32px 80px rgba(0, 0, 0, 0.60), 0 4px 12px rgba(0, 0, 0, 0.40);
+  --shadow-glow: 0 0 0 1px rgba(125, 128, 245, 0.30), 0 8px 32px rgba(99, 102, 241, 0.30);
+}
+
+/* ================================================================
+ * Reset & base
+ * ================================================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg-0);
+  color: var(--ink-1);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.55;
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.005em;
+  transition: background-color var(--t-med) var(--ease-out),
+              color var(--t-med) var(--ease-out);
+}
+
+/* Subtle noise + ambient gradient overlay — sits behind everything */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(1200px 700px at 12% -10%, color-mix(in srgb, var(--brand-500) 14%, transparent), transparent 60%),
+    radial-gradient(900px 600px at 95% 8%, color-mix(in srgb, #8b5cf6 12%, transparent), transparent 65%),
+    radial-gradient(800px 500px at 50% 110%, color-mix(in srgb, var(--brand-400) 8%, transparent), transparent 60%);
+  filter: saturate(115%);
+}
+
+[data-theme="dark"] body::before {
+  background:
+    radial-gradient(1200px 700px at 12% -10%, color-mix(in srgb, var(--brand-500) 22%, transparent), transparent 60%),
+    radial-gradient(900px 600px at 95% 8%, color-mix(in srgb, #8b5cf6 18%, transparent), transparent 65%),
+    radial-gradient(800px 500px at 50% 110%, color-mix(in srgb, var(--brand-400) 14%, transparent), transparent 60%);
+}
+
+/* Noise grain — extremely subtle */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.025;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/></svg>");
+}
+
+button,
+textarea,
+input,
+select {
+  font: inherit;
+  color: inherit;
+  transition:
+    background-color var(--t-fast) var(--ease-out),
+    border-color var(--t-fast) var(--ease-out),
+    box-shadow var(--t-fast) var(--ease-out),
+    color var(--t-fast) var(--ease-out),
+    transform var(--t-fast) var(--ease-out);
+}
+
+button {
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 36px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  padding: 0 14px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--ink-1);
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+button:focus-visible,
+textarea:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-500) 24%, transparent);
+  border-color: var(--brand-500);
+}
+
+textarea, input, select {
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 8px 12px;
+  background: var(--bg-1);
+  color: var(--ink-1);
+}
+
+textarea {
+  font-family: var(--font-sans);
+  resize: vertical;
+}
+
+/* ================================================================
+ * Button system
+ * ================================================================ */
+
+.primary {
+  background: linear-gradient(180deg, var(--brand-500), var(--brand-600));
+  color: #fff;
+  border-color: var(--brand-600);
+  font-weight: 600;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.20),
+    0 1px 2px rgba(67, 56, 202, 0.30),
+    0 6px 16px -4px rgba(79, 70, 229, 0.35);
+}
+
+.primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, var(--brand-500), var(--brand-700));
+  border-color: var(--brand-700);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 4px 12px rgba(67, 56, 202, 0.30),
+    0 12px 24px -6px rgba(79, 70, 229, 0.45);
+}
+
+.primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.ghost {
+  background: var(--bg-1);
+  border-color: var(--line);
+  color: var(--ink-1);
+  font-weight: 500;
+  box-shadow: var(--shadow-xs);
+}
+
+.ghost:hover:not(:disabled) {
+  background: var(--bg-2);
+  border-color: var(--line-bold);
+  color: var(--ink-0);
+}
+
+[data-theme="dark"] .ghost:hover:not(:disabled) {
+  background: var(--bg-3);
+  border-color: var(--line-bold);
+}
+
+/* Quiet / text-style action button */
+.subtle {
+  background: transparent;
+  border-color: transparent;
+  color: var(--ink-2);
+  font-weight: 500;
+}
+
+.subtle:hover:not(:disabled) {
+  background: var(--bg-2);
+  color: var(--ink-0);
+}
+
+.panel-upload-btn {
+  min-height: 26px;
+  padding: 0 10px;
+  font-size: 11px;
+  border-radius: var(--r-pill);
+  letter-spacing: 0.01em;
+  font-weight: 500;
+}
+
+.theme-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--bg-1);
+  color: var(--ink-2);
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+}
+
+.theme-toggle:hover {
+  background: var(--bg-2);
+  color: var(--ink-0);
+  border-color: var(--line-bold);
+  transform: translateY(-1px);
+}
+
+/* ================================================================
+ * Selection & scrollbars
+ * ================================================================ */
+
+::selection {
+  background: color-mix(in srgb, var(--brand-500) 24%, transparent);
+  color: var(--ink-0);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--ink-4) 30%, transparent);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  transition: background-color var(--t-fast) var(--ease-out);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--ink-3) 50%, transparent);
+  background-clip: content-box;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--ink-4) 30%, transparent) transparent;
+}
