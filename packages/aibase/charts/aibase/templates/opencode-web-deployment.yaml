@@ -58,7 +58,7 @@ spec:
             - name: {{ $name }}
               value: {{ $value | quote }}
             {{- end }}
-            {{- if .Values.opencodeWeb.serverAuth.enabled }}
+            {{- if and .Values.opencodeWeb.serverAuth .Values.opencodeWeb.serverAuth.enabled }}
             - name: OPENCODE_SERVER_USERNAME
               value: {{ .Values.opencodeWeb.serverAuth.username | quote }}
             {{- if .Values.opencodeWeb.serverAuth.existingSecret }}

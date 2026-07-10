@@ -36,7 +36,7 @@ spec:
               service:
                 name: {{ include "aibase.fullname" $ }}-drawing-board
                 port:
-                  number: {{ $.Values.drawingBoard.service.port }}
+                  number: {{ dig "service" "port" 80 $.Values.drawingBoard }}
           {{- end }}
     {{- end }}
 {{- end }}

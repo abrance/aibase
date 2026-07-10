@@ -61,7 +61,7 @@ Create the name of the service account to use.
 Whether this release should create a managed secret.
 */}}
 {{- define "aibase.hasManagedSecret" -}}
-{{- if or (and .Values.opencode.serverAuth.enabled (not .Values.opencode.serverAuth.existingSecret) .Values.opencode.serverAuth.password) (and .Values.opencode.config.content (not .Values.opencode.config.existingSecret)) (and .Values.credentials.items (not .Values.credentials.existingSecret)) (and .Values.opencodeWeb.serverAuth.enabled (not .Values.opencodeWeb.serverAuth.existingSecret) .Values.opencodeWeb.serverAuth.password) -}}
+{{- if or (and .Values.opencode.serverAuth.enabled (not .Values.opencode.serverAuth.existingSecret) .Values.opencode.serverAuth.password) (and .Values.opencode.config.content (not .Values.opencode.config.existingSecret)) (and .Values.credentials.items (not .Values.credentials.existingSecret)) (and .Values.opencodeWeb.enabled .Values.opencodeWeb.serverAuth .Values.opencodeWeb.serverAuth.enabled (not .Values.opencodeWeb.serverAuth.existingSecret) .Values.opencodeWeb.serverAuth.password) -}}
 true
 {{- end -}}
 {{- end }}

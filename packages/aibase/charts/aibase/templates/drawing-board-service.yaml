@@ -6,9 +6,11 @@ metadata:
   labels:
     {{- include "aibase.labels" . | nindent 4 }}
     app.kubernetes.io/component: drawing-board
+  {{- if .Values.drawingBoard.service }}
   {{- with .Values.drawingBoard.service.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
+  {{- end }}
   {{- end }}
 spec:
   type: {{ .Values.drawingBoard.service.type }}
