@@ -6,10 +6,5 @@
     "check": "pnpm --filter @aibase/core check",
     "test": "pnpm --filter @aibase/core test",
     "build:sdk": "pnpm --filter @aibase/sdk build"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "better-sqlite3"
-    ]
   }
 }
