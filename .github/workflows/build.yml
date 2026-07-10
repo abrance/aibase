@@ -161,6 +161,8 @@ jobs:
               webHost: "0.0.0.0"
               webPort: "4096"
               webCors: "*"
+              serverAuth:
+                enabled: false
               service:
                 type: ClusterIP
                 port: 4096
