@@ -206,6 +206,9 @@ jobs:
                 tag: "${IMAGE_TAG}"
                 pullPolicy: IfNotPresent
               aibaseBackendUrl: "http://aibase:3001"
+              extraEnv:
+                - name: VITE_ALLOWED_HOSTS
+                  value: "draw.us.xiaoyxq.top,ai.us.xiaoyxq.top"
               service:
                 type: ClusterIP
                 port: 80
