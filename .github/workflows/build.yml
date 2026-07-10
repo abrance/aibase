@@ -22,7 +22,7 @@ jobs:
           node-version: 22
       - uses: pnpm/action-setup@v4
         with:
-          version: latest
+          version: 10.29.3
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @aibase/core check
       - run: pnpm --filter @aibase/core test
