@@ -3,7 +3,7 @@ FROM ${NODE_IMAGE}
 
 ARG OPENCODE_VERSION=latest
 ARG OMO_VERSION=latest
-ARG OMO_SUBSCRIPTIONS=""
+ARG OMO_SUBSCRIPTIONS="--claude=max20 --gemini=yes --copilot=no"
 
 ENV NODE_ENV=production \
     AIBASE_HOST=0.0.0.0 \
@@ -38,7 +38,7 @@ RUN apt-get update \
 RUN pip3 install --break-system-packages cryptography -i https://pypi.mirrors.ustc.edu.cn/simple/ 
 
 RUN npm install -g "opencode-ai@${OPENCODE_VERSION}" bun
-RUN bunx "oh-my-openagent@${OMO_VERSION}" install --platform=both ${OMO_SUBSCRIPTIONS}
+RUN bunx "oh-my-openagent@${OMO_VERSION}" install --no-tui --platform=both ${OMO_SUBSCRIPTIONS}
 
 RUN groupadd --gid 10001 aibase \
     && useradd --uid 10001 --gid 10001 --create-home --shell /bin/bash aibase \
