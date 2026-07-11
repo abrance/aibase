@@ -87,9 +87,37 @@ spec:
             {{- end }}
           {{- end }}
           livenessProbe:
-            {{- toYaml .Values.opencodeWeb.livenessProbe | nindent 12 }}
+            {{- $probe := .Values.opencodeWeb.livenessProbe }}
+            {{- if and .Values.opencodeWeb.serverAuth .Values.opencodeWeb.serverAuth.enabled .Values.opencodeWeb.serverAuth.password }}
+            httpGet:
+              path: {{ $probe.httpGet.path }}
+              port: {{ $probe.httpGet.port }}
+              httpHeaders:
+                - name: Authorization
+                  value: "Basic {{ printf "%s:%s" .Values.opencodeWeb.serverAuth.username .Values.opencodeWeb.serverAuth.password | b64enc }}"
+            initialDelaySeconds: {{ $probe.initialDelaySeconds }}
+            periodSeconds: {{ $probe.periodSeconds }}
+            timeoutSeconds: {{ $probe.timeoutSeconds }}
+            failureThreshold: {{ $probe.failureThreshold }}
+            {{- else }}
+            {{- toYaml $probe | nindent 12 }}
+            {{- end }}
           readinessProbe:
-            {{- toYaml .Values.opencodeWeb.readinessProbe | nindent 12 }}
+            {{- $probe := .Values.opencodeWeb.readinessProbe }}
+            {{- if and .Values.opencodeWeb.serverAuth .Values.opencodeWeb.serverAuth.enabled .Values.opencodeWeb.serverAuth.password }}
+            httpGet:
+              path: {{ $probe.httpGet.path }}
+              port: {{ $probe.httpGet.port }}
+              httpHeaders:
+                - name: Authorization
+                  value: "Basic {{ printf "%s:%s" .Values.opencodeWeb.serverAuth.username .Values.opencodeWeb.serverAuth.password | b64enc }}"
+            initialDelaySeconds: {{ $probe.initialDelaySeconds }}
+            periodSeconds: {{ $probe.periodSeconds }}
+            timeoutSeconds: {{ $probe.timeoutSeconds }}
+            failureThreshold: {{ $probe.failureThreshold }}
+            {{- else }}
+            {{- toYaml $probe | nindent 12 }}
+            {{- end }}
           resources:
             {{- toYaml .Values.opencodeWeb.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}

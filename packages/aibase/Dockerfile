@@ -2,6 +2,8 @@ ARG NODE_IMAGE=node:22-bookworm-slim
 FROM ${NODE_IMAGE}
 
 ARG OPENCODE_VERSION=latest
+ARG OMO_VERSION=latest
+ARG OMO_SUBSCRIPTIONS=""
 
 ENV NODE_ENV=production \
     AIBASE_HOST=0.0.0.0 \
@@ -37,6 +39,7 @@ RUN pip3 install --break-system-packages cryptography -i https://pypi.mirrors.us
 
 RUN npm install -g "opencode-ai@${OPENCODE_VERSION}"
 RUN npm install -g codebase-memory-mcp
+RUN npm install -g "oh-my-openagent@${OMO_VERSION}" && omo install ${OMO_SUBSCRIPTIONS}
 
 RUN groupadd --gid 10001 aibase \
     && useradd --uid 10001 --gid 10001 --create-home --shell /bin/bash aibase \

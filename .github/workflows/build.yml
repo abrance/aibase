@@ -152,6 +152,14 @@ jobs:
                 --username "${{ github.actor }}" \
                 --password-stdin
 
+            # opencode-web Basic Auth 密码
+            OPENCODE_WEB_PASS=$(openssl rand -base64 16)
+            sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl create secret generic opencode-web-auth \
+              -n aibase \
+              --from-literal=OPENCODE_SERVER_PASSWORD="$OPENCODE_WEB_PASS" \
+              --dry-run=client -o yaml | \
+              sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl apply -f -
+
             # opencode-web 配置（values-us.yaml 不在远程主机上，用 heredoc 写入）
             cat > /tmp/opencode-web-values.yaml << 'EOF'
             opencodeWeb:
@@ -162,7 +170,10 @@ jobs:
               webPort: "4096"
               webCors: "*"
               serverAuth:
-                enabled: false
+                enabled: true
+                username: "opencode"
+                existingSecret: "opencode-web-auth"
+                passwordSecretKey: "OPENCODE_SERVER_PASSWORD"
               service:
                 type: ClusterIP
                 port: 4096
@@ -231,5 +242,6 @@ jobs:
               --set image.repository="ghcr.io/${{ github.repository_owner }}/aibase" \
               --set image.tag="${IMAGE_TAG}" \
               --set image.pullPolicy=IfNotPresent \
+              --set opencodeWeb.serverAuth.password="${OPENCODE_WEB_PASS}" \
               --atomic \
               --wait
