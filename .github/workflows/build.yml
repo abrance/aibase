@@ -111,7 +111,17 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Package Helm chart
-        run: helm package packages/aibase/charts/aibase -d packages/aibase/charts/
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            TAG="${{ github.ref_name }}"
+            VERSION="${TAG#v}"
+            helm package packages/aibase/charts/aibase \
+              -d packages/aibase/charts/ \
+              --version "${VERSION}" \
+              --app-version "${VERSION}"
+          else
+            helm package packages/aibase/charts/aibase -d packages/aibase/charts/
+          fi
 
       - name: Log in to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ${{ env.REGISTRY }} --username ${{ github.actor }} --password-stdin
