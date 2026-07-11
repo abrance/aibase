@@ -162,8 +162,11 @@ jobs:
                 --username "${{ github.actor }}" \
                 --password-stdin
 
-            # opencode-web Basic Auth 密码
-            OPENCODE_WEB_PASS=$(openssl rand -base64 16)
+            # opencode-web Basic Auth 密码 — 优先使用 Secret，否则随机生成
+            OPENCODE_WEB_PASS="${{ secrets.K3S_OPENCODE_WEB_PASSWORD }}"
+            if [ -z "$OPENCODE_WEB_PASS" ]; then
+              OPENCODE_WEB_PASS=$(openssl rand -base64 16)
+            fi
             sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl create secret generic opencode-web-auth \
               -n aibase \
               --from-literal=OPENCODE_SERVER_PASSWORD="$OPENCODE_WEB_PASS" \
