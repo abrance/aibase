@@ -254,4 +254,5 @@ jobs:
               --set image.pullPolicy=IfNotPresent \
               --set opencodeWeb.serverAuth.password="${OPENCODE_WEB_PASS}" \
               --atomic \
+              --timeout 30m \
               --wait
